@@ -1,334 +1,42 @@
-1️⃣ Core Architecture Rule (Very Important)
-Routing & Layer Separation
+- create API contain name `vendor/shop/admin/*` 
+- always follow this structure for `vendor/doctor/admin` and barber
+- all api must create under API folder beacuse we are using same API for android application.
+
+Shop Admin Panel : 
+    - only accessible to auth user 
+    - at user setting menu `Manage Shop` page
+    - list all shop related to that user if multiple than also list there in card view with proper moder structure with search.
+    - mention all detail about shop at card (shop name , total product , total category , active/inactive , notification (if admin send message for perticuler shop)).
+    - also give `manage shop` button top manage it
+
+Manage Shop :   
+    - land on dashboard containing all relatyed shops widget.
+    - sidebar menu for `Manage category` , `Manage Product` , `Setting` .etc
+    - give breadcrumt to all pages to easy navigate 
+    - `setting` allow to edit shop timing and address , if edit name than let admin to approve first.once approve than it will be reflect till that it will show message that shop rename is pending to review at shop dashboard and setting page as well and once edit shop name than it will readonly until admin aprove.
+
+Manage Category : 
+    - allow shop admin to add/edit/delete category
+    - category name, descripption (editor) , status , image 
+    - if any admin delete any category which is also used in product than show him alert message with all product display name ,qty and preview before delete. if shop admin delete  that category and check the consent than let delete category as well as all relawent product.
+    - let admin to set public/draft category accordingly it will be display in front
+    - preview page for category 
+
+Manage Product : 
+    - `Manage Product` let shop admin to add/edit/delete product with beautifull ui and also let admin to add feature like `feature product`, `offer` like all tags 
+    - let qty as optional 
+    - allow multiple image to upload in with preview 
+    - Product Name, select category , Description (editor) , scheduler for upload , price
+    - Product price : ( conditional )
+        - if super admin set perticuler admin to display price than only product price display in store for user 
+        - shop admin can upload price even if admin disallow but it will not display in store product listing.
+        - admin can set global disallow price as well as perticuler shop too.
+        - create toggle for that at admin config section `Allow Display Price for Shop product` with description 
+        - also create toggle another for `Allow user specific allow product price` it will list all shop user and only selected user's shop product display price 
+        - there will be conditional user specific or all 
+
+    - allow shop admin to upload/edit/deleet  shop image 
+    - all image must display properly wiht lightgallery preview.
+    - in shop admin preview product to dsiplay image there will carousel and main image with grid formate at below and if more than 5 than it will be just display count of remaning `3 more`.
 
-Super Admin
 
-All Super Admin routes must be defined in:
-
-routes/web.php
-
-
-Super Admin features are web-only
-
-No Super Admin functionality should rely on API routes
-
-User / Vendor (Shop, Doctor, Barber)
-
-All User and Vendor functionality must use:
-
-routes/api.php
-
-
-Reason:
-
-Same APIs are consumed by:
-
-Web layer
-
-Android application
-
-No vendor or user logic should be implemented in web.php
-
-2️⃣ Common Module Guidelines
-
-Maintain identical structure and behavior for:
-
-vendor/shop/admin/*
-
-vendor/doctor/admin/*
-
-vendor/barber/admin/*
-
-Follow consistent:
-
-Route naming
-
-Controller structure
-
-Permissions
-
-UI/UX flow
-
-APIs must be:
-
-Stateless
-
-Authenticated
-
-Role-aware
-
-Version-ready (future-proof)
-
-3️⃣ API Structure (User & Vendor Only)
-Base API Namespace
-/api/vendor/shop/admin/*
-/api/vendor/doctor/admin/*
-/api/vendor/barber/admin/*
-
-API Rules
-
-All APIs must:
-
-Reside in routes/api.php
-
-Be reusable across Web & Android
-
-Follow RESTful conventions
-
-Return standardized JSON responses
-
-Authentication via API guard
-
-Authorization based on user–vendor ownership
-
-4️⃣ Super Admin Panel (Web Only)
-Routing
-
-All Super Admin routes:
-
-routes/web.php
-
-
-Protected by:
-
-Super Admin auth middleware
-
-Role/permission checks
-
-Responsibilities
-
-Global system configuration
-
-Vendor & user management
-
-Approval workflows (shop rename, price visibility, etc.)
-
-Feature toggles & platform-level settings
-
-5️⃣ Vendor Shop Admin Panel (User-Side)
-Entry Point
-
-Accessible from User Settings → Manage Shop
-
-Available only to authenticated users
-
-Shop Listing Page
-
-List all shops linked to the user
-
-Card-based layout with:
-
-Shop Name
-
-Total Products
-
-Total Categories
-
-Active / Inactive status
-
-Admin notifications (shop-specific)
-
-Manage Shop button
-
-Support:
-
-Search
-
-Multiple shops per user
-
-6️⃣ Manage Shop – Dashboard
-Dashboard
-
-Default landing page after selecting a shop
-
-Show widgets:
-
-Products
-
-Categories
-
-Status
-
-Notifications
-
-Sidebar Menu
-
-Manage Category
-
-Manage Product
-
-Settings
-
-(Future expandable)
-
-Navigation
-
-Breadcrumbs required on all pages
-
-7️⃣ Shop Settings
-Editable Information
-
-Shop timing
-
-Shop address
-
-Shop name (approval required)
-
-Shop Rename Approval Flow
-
-When shop name is edited:
-
-Status becomes Pending Approval
-
-Approval handled by Super Admin (Web)
-
-Until approval:
-
-Show notice:
-
-“Shop rename is pending for admin review”
-
-Display message on:
-
-Shop Dashboard
-
-Settings page
-
-Shop name field becomes read-only until decision
-
-8️⃣ Manage Category
-Category CRUD
-
-Add / Edit / Delete category
-
-Category Fields
-
-Name
-
-Description (Rich Text Editor)
-
-Status (Active / Inactive)
-
-Visibility:
-
-Public
-
-Draft
-
-Image
-
-Delete Safety Check
-
-If category is linked to products:
-
-Show confirmation modal
-
-Display:
-
-Product name
-
-Quantity
-
-Preview
-
-Require explicit consent
-
-On confirmation:
-
-Delete category
-
-Delete all related products
-
-Extra
-
-Category preview page
-
-Visibility controls frontend display
-
-9️⃣ Manage Product
-Product Features
-
-Add / Edit / Delete products
-
-Tagging:
-
-Featured product
-
-Offer
-
-Custom tags
-
-Quantity field optional
-
-Scheduler for publishing
-
-Product Fields
-
-Product name
-
-Category
-
-Description (Rich Text Editor)
-
-Price (conditional)
-
-Quantity (optional)
-
-Multiple images with preview
-
-🔟 Product Price Visibility Logic
-Core Rules
-
-Shop admin can always enter price
-
-Frontend price display depends on Super Admin settings
-
-Super Admin Controls (Web Only)
-
-Located in Super Admin configuration panel:
-
-Allow Display Price for Shop Products
-
-Global toggle
-
-Applies to all shops
-
-Allow User-Specific Product Price Display
-
-Enable per user
-
-Select specific shop users
-
-Supports:
-
-Global
-
-User-specific overrides
-
-1️⃣1️⃣ Product Images & Preview
-Image Management
-
-Upload / Edit / Delete images
-
-Multiple image support
-
-Display Requirements
-
-LightGallery preview for all images
-
-Product preview page:
-
-Main image carousel
-
-Thumbnail grid below
-
-If more than 5 images:
-
-Show remaining count (e.g., +3 more)
-
-✅ Final Architectural Summary
-Layer	Route File	Purpose
-Super Admin	web.php	Web-only admin operations
-User / Vendor	api.php	Shared Web + Android logic
-Android App	API	Consumes same vendor/user APIs
-Web Frontend	API	Uses same APIs as mobile
