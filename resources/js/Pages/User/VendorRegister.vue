@@ -9,6 +9,29 @@
         <p class="subtitle">Join our community directory and connect with local customers.</p>
       </div>
 
+      <!-- Status Notice -->
+      <div v-if="applicationStatus" class="status-notice-wrapper">
+        <div :class="['status-card', applicationStatus.status]">
+          <div class="status-icon">
+            <i v-if="applicationStatus.status === 'pending'" class="fa-solid fa-clock-rotate-left"></i>
+            <i v-else-if="applicationStatus.status === 'rejected'" class="fa-solid fa-circle-exclamation"></i>
+          </div>
+          <div class="status-content">
+            <h4>Application status for "{{ applicationStatus.business_name }}"</h4>
+            <div v-if="applicationStatus.status === 'pending'">
+              <p>Your application is currently being reviewed by our administrators. We'll notify you once it's approved.</p>
+            </div>
+            <div v-else-if="applicationStatus.status === 'rejected'">
+              <p>Your application was unfortunately rejected.</p>
+              <div v-if="applicationStatus.reason" class="rejection-reason">
+                <strong>Reason:</strong> {{ applicationStatus.reason }}
+              </div>
+              <p class="mt-2">You can update your details and resubmit the form below.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <form @submit.prevent="handleRegister" class="register-form">
         <!-- Business Information -->
         <div class="form-section">
@@ -35,7 +58,7 @@
           <div class="form-group">
             <label>Business Type <span class="required">*</span></label>
             <div class="input-with-icon">
-              <i class="fa-solid fa-tags"></i>
+              <i class="fa-solid fa-briefcase"></i>
               <select 
                 v-model="form.business_type" 
                 required
@@ -43,19 +66,32 @@
                 class="form-select"
               >
                 <option value="">Select Business Type</option>
-                <option value="retail">Retail Store</option>
-                <option value="restaurant">Restaurant/Food Service</option>
-                <option value="service">Service Provider</option>
-                <option value="healthcare">Healthcare</option>
-                <option value="education">Education</option>
-                <option value="technology">Technology</option>
-                <option value="automotive">Automotive</option>
-                <option value="beauty">Beauty & Wellness</option>
-                <option value="real_estate">Real Estate</option>
-                <option value="other">Other</option>
+                <option value="shop">Shop / Store</option>
+                <option value="doctor">Doctor / Clinic</option>
+                <option value="barber">Barber Shop</option>
               </select>
             </div>
             <div v-if="errors.business_type" class="error-message">{{ errors.business_type[0] }}</div>
+          </div>
+
+          <!-- Shop Category (Only if Shop is selected) -->
+          <div v-if="form.business_type === 'shop'" class="form-group">
+            <label>Shop Category <span class="required">*</span></label>
+            <div class="input-with-icon">
+              <i class="fa-solid fa-tags"></i>
+              <select 
+                v-model="form.shop_category_id" 
+                required
+                :disabled="loading"
+                class="form-select"
+              >
+                <option value="">Select Category</option>
+                <option v-for="category in shopCategories" :key="category.id" :value="category.id">
+                    {{ category.name }}
+                </option>
+              </select>
+            </div>
+            <div v-if="errors.shop_category_id" class="error-message">{{ errors.shop_category_id[0] }}</div>
           </div>
 
           <div class="form-group">
@@ -242,6 +278,36 @@
             <div class="form-note">Help customers understand what you offer</div>
           </div>
 
+          <div class="form-group">
+            <label>{{ imageLabel }} (Optional)</label>
+            <div class="image-upload-wrapper">
+              <input 
+                type="file" 
+                @change="handleImageUpload" 
+                multiple 
+                accept="image/*" 
+                class="hidden-input"
+                id="business-images"
+                :disabled="loading"
+              >
+              <label for="business-images" :class="['upload-trigger', { disabled: loading }]">
+                <i class="fa-solid fa-images mr-2"></i>
+                <span>{{ selectedImages.length ? 'Add More Images' : 'Select Business Images' }}</span>
+              </label>
+              
+              <div v-if="imagePreviews.length" class="image-previews">
+                <div v-for="(src, index) in imagePreviews" :key="index" class="preview-item">
+                  <img :src="src" alt="Preview">
+                  <button @click.prevent="removeImage(index)" class="remove-btn" title="Remove image">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                  </button>
+                  <div v-if="index === 0" class="primary-badge">Primary</div>
+                </div>
+              </div>
+            </div>
+            <div class="form-note">Upload clear photos to showcase your business. First image will be used as cover.</div>
+          </div>
+
           <div class="form-options">
             <label class="checkbox-container">
               <input type="checkbox" v-model="form.agree_terms" required>
@@ -269,7 +335,7 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
+import { reactive, ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import BaseButton from '../../Components/BaseButton.vue';
 import axios from 'axios';
@@ -278,10 +344,12 @@ import swal from '../../utils/swal';
 const router = useRouter();
 const loading = ref(false);
 const errors = ref({});
+const shopCategories = ref([]);
 
 const form = reactive({
   business_name: '',
-  business_type: '',
+  business_type: '', // shop, doctor, barber
+  shop_category_id: '', // Updated from shop_category (string) to ID
   description: '',
   phone: '',
   email: '',
@@ -295,6 +363,52 @@ const form = reactive({
   agree_terms: false
 });
 
+const applicationStatus = ref(null);
+const selectedImages = ref([]);
+const imagePreviews = ref([]);
+
+const imageLabel = computed(() => {
+    switch (form.business_type) {
+        case 'shop': return 'Shop Images';
+        case 'doctor': return 'Clinic Images';
+        case 'barber': return 'Barber Shop Images';
+        default: return 'Business Images';
+    }
+});
+
+const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+        selectedImages.value.push(file);
+        const reader = new FileReader();
+        reader.onload = (e) => imagePreviews.value.push(e.target.result);
+        reader.readAsDataURL(file);
+    });
+};
+
+const removeImage = (index) => {
+    selectedImages.value.splice(index, 1);
+    imagePreviews.value.splice(index, 1);
+};
+
+const fetchStatus = async () => {
+    try {
+        const response = await axios.get('/api/v1/register-business/status');
+        if (response.data.success && response.data.data) {
+            // Only show if pending or rejected
+            if (['pending', 'rejected'].includes(response.data.data.status)) {
+                applicationStatus.value = response.data.data;
+                // Pre-fill some data if rejected
+                if (response.data.data.status === 'rejected') {
+                    // Pre-filling could go here if we had more data from status
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Failed to fetch application status', error);
+    }
+};
+
 const daysOfWeek = [
   { label: 'Monday', value: 'monday' },
   { label: 'Tuesday', value: 'tuesday' },
@@ -305,39 +419,57 @@ const daysOfWeek = [
   { label: 'Sunday', value: 'sunday' }
 ];
 
+onMounted(async () => {
+    fetchStatus();
+    try {
+        const response = await axios.get('/api/v1/shop-categories');
+        if (response.data.success) {
+            shopCategories.value = response.data.data;
+        }
+    } catch (error) {
+        console.error('Failed to fetch shop categories', error);
+    }
+});
+
 const handleRegister = async () => {
     loading.value = true;
     errors.value = {};
     
     try {
-        // Prepare the data
-        const registrationData = {
-            name: form.business_name,
-            type: form.business_type,
-            description: form.description,
-            phone: form.phone,
-            email: form.email,
-            website: form.website,
-            address: form.address,
-            city: form.city,
-            state: form.state,
-            services: form.services,
-            operating_days: form.operating_days,
-            business_hours: form.hours
-        };
+        // Prepare the data with FormData for file uploads
+        const formData = new FormData();
+        formData.append('name', form.business_name);
+        formData.append('type', form.business_type);
+        if (form.business_type === 'shop' && form.shop_category_id) {
+            formData.append('shop_category_id', form.shop_category_id);
+        }
+        formData.append('description', form.description);
+        formData.append('phone', form.phone);
+        formData.append('email', form.email);
+        formData.append('website', form.website || '');
+        formData.append('address', form.address);
+        formData.append('city', form.city);
+        formData.append('state', form.state);
+        formData.append('services', form.services || '');
+        
+        form.operating_days.forEach(day => formData.append('operating_days[]', day));
+        
+        Object.keys(form.hours).forEach(key => {
+            formData.append(`business_hours[${key}]`, form.hours[key]);
+        });
 
-        const response = await axios.post('/api/v1/register-business', registrationData, {
-            headers: { 'X-Api-Key': 'business-point-secret-key' }
+        selectedImages.value.forEach(file => {
+            formData.append('images[]', file);
+        });
+
+        const response = await axios.post('/api/v1/register-business', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
         });
         
         if (response.data.success) {
-            swal.fire({
-                title: 'Business Registration Successful!',
-                text: 'Your business has been submitted for review. You will be notified once it\'s approved and added to the directory.',
-                icon: 'success',
-                confirmButtonText: 'Continue'
-            }).then(() => {
-                router.push('/');
+            router.push({ 
+                name: 'business.register.success', 
+                query: { id: response.data.data.id } 
             });
         }
     } catch (error) {
@@ -660,6 +792,154 @@ const handleRegister = async () => {
   
   .subtitle {
     font-size: 1rem;
+  }
+}
+
+/* Status Notice Styles */
+.status-notice-wrapper {
+  padding: 20px 40px 0;
+}
+
+.status-card {
+  display: flex;
+  gap: 20px;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  align-items: flex-start;
+}
+
+.status-card.pending {
+  background-color: #fff8dd;
+  border-color: #ffc700;
+  color: #856404;
+}
+
+.status-card.rejected {
+  background-color: #fff5f8;
+  border-color: #f64e60;
+  color: #7e3339;
+}
+
+.status-icon {
+  font-size: 1.8rem;
+  padding-top: 2px;
+}
+
+.status-content h4 {
+  margin: 0 0 5px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.status-content p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.rejection-reason {
+  margin: 10px 0;
+  padding: 10px;
+  background: rgba(246, 78, 96, 0.1);
+  border-left: 4px solid #f64e60;
+  font-style: italic;
+}
+
+/* Image Upload Styles */
+.image-upload-wrapper {
+  margin-top: 10px;
+}
+
+.hidden-input {
+  display: none;
+}
+
+.upload-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  border: 2px dashed #e1e3ea;
+  border-radius: 12px;
+  background: #f9f9fc;
+  color: #7e8299;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.upload-trigger:hover:not(.disabled) {
+  border-color: #3699ff;
+  color: #3699ff;
+  background: rgba(54, 153, 255, 0.05);
+}
+
+.upload-trigger.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.image-previews {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.preview-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e1e3ea;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remove-btn {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background: white;
+  border: none;
+  color: #f64e60;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: transform 0.2s;
+}
+
+.remove-btn:hover {
+  transform: scale(1.1);
+}
+
+.primary-badge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(54, 153, 255, 0.9);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 4px;
+  text-transform: uppercase;
+}
+
+@media (max-width: 768px) {
+  .status-notice-wrapper {
+    padding: 20px 20px 0;
   }
 }
 </style>

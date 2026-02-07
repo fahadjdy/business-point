@@ -30,6 +30,19 @@ const AuthService = {
             console.error('AuthService.logout failed:', error);
             throw error;
         }
+    },
+
+    /**
+     * Fetch current user profile
+     */
+    async fetchUser() {
+        try {
+            const response = await axios.get('/api/v1/auth/user');
+            return response.data;
+        } catch (error) {
+            console.error('AuthService.fetchUser failed:', error);
+            throw error;
+        }
     }
 };
 

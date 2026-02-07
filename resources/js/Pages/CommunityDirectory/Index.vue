@@ -16,6 +16,13 @@
                 >
             </div>
             
+            <div class="flex justify-between items-center mb-4 px-1">
+               <h2 class="text-lg font-bold text-gray-700">Directory</h2>
+               <span class="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full">
+                  {{ pagination.total }} Members
+               </span>
+            </div>
+
             <div class="filter-row">
                <!-- Tabs -->
                <div class="filter-tabs shadow-sm">
@@ -31,12 +38,13 @@
                </div>
 
                <!-- Quick Tags with Filter Icon -->
-               <div class="quick-tags">
+                <div class="quick-tags">
                   <button 
                     v-for="tag in quickTags" 
                     :key="tag.label"
                     @click="applyQuickTag(tag.label)"
                     class="tag-pill"
+                    :class="{ active: searchKeyword === tag.label }"
                   >
                      {{ tag.label }} <i :class="tag.icon" class="ml-2 icon-opacity"></i>
                   </button>
@@ -45,8 +53,9 @@
                   <button 
                     @click="showAllTagsFilter = !showAllTagsFilter"
                     class="tag-pill filter-pill"
+                    :class="{ active: selectedTag && searchKeyword === selectedTag.name }"
                   >
-                     <i class="fa-solid fa-filter mr-2"></i> Filter
+                     <i class="fa-solid fa-filter mr-2"></i> {{ selectedTag && searchKeyword === selectedTag.name ? selectedTag.name : 'Filter' }}
                   </button>
                </div>
 
@@ -213,8 +222,8 @@ const typeOptions = [
 
 const quickTags = [
   { label: 'Doctor', icon: 'fa-solid fa-briefcase-medical' },
-  { label: 'Groceries', icon: 'fa-solid fa-cart-shopping' },
-  { label: 'Plumbers', icon: 'fa-solid fa-wrench' },
+  { label: 'Grocery', icon: 'fa-solid fa-cart-shopping' },
+  { label: 'Plumber', icon: 'fa-solid fa-wrench' },
   { label: 'Electrician', icon: 'fa-solid fa-bolt' }
 ];
 
@@ -223,14 +232,15 @@ const fetchContacts = async (page = 1) => {
   try {
     const params = {
       page,
-      sort_by: 'sort_order',
+      sort_by: 'name',
       sort_order: 'asc',
       is_active: 1
     };
     
+    // Use keyword OR tag_id depending on how the user interacted
     if (searchKeyword.value) params.keyword = searchKeyword.value;
-    if (selectedType.value) params.type = selectedType.value;
     if (selectedTag.value) params.tag_id = selectedTag.value.id;
+    if (selectedType.value) params.type = selectedType.value;
 
     const response = await axios.get('/api/v1/community-directory', { 
       params,
@@ -267,32 +277,47 @@ const fetchTags = async () => {
 
 const selectTagFromAll = (tag) => {
   selectedTag.value = tag;
+  searchKeyword.value = tag.name; // Auto-fill search box when selecting from dropdown too
   showAllTagsFilter.value = false;
   fetchContacts(1);
 };
 
 const clearAllTagsFilter = () => {
   selectedTag.value = null;
+  searchKeyword.value = '';
   showAllTagsFilter.value = false;
   fetchContacts(1);
 };
 
 const applyQuickTag = (tagName) => {
-  // Find the tag by name for proper tag-based filtering
+  searchKeyword.value = tagName; // Auto-fill search box
+  
+  // Find the tag by name for proper tag-based filtering if it exists
   const tag = availableTags.value.find(t => t.name.toLowerCase() === tagName.toLowerCase());
   if (tag) {
     selectedTag.value = tag;
-    searchKeyword.value = ''; // Clear search when using tag filter
   } else {
-    // Fallback to keyword search if tag not found
-    searchKeyword.value = tagName;
     selectedTag.value = null;
   }
-  selectedType.value = '';
+  
+  // Keep the type filter if it's already set, or clear it? 
+  // User usually wants to search within the current type (e.g. Service -> Plumber)
+  // But common behavior for "Quick Filters" is often a fresh search.
+  // I'll keep it cumulative unless they switch tabs.
+  
   fetchContacts(1);
 };
 
 const debounceSearch = debounce(() => {
+  if (!searchKeyword.value) {
+    selectedTag.value = null;
+  } else {
+    // Auto-sync tag if typed keyword matches exactly
+    const tag = availableTags.value.find(t => t.name.toLowerCase() === searchKeyword.value.trim().toLowerCase());
+    if (tag) {
+       selectedTag.value = tag;
+    }
+  }
   fetchContacts(1);
 }, 500);
 
@@ -428,6 +453,7 @@ onUnmounted(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: 20px;
+  position: relative; /* Added to fix dropdown positioning */
 }
 
 .card-tags {
@@ -510,6 +536,16 @@ onUnmounted(() => {
     border-color: #3699ff;
     color: #3699ff;
     background: #e1f0ff;
+}
+
+.tag-pill.active {
+    background: #3699ff;
+    color: white !important;
+    border-color: #3699ff;
+}
+
+.tag-pill.active .icon-opacity {
+    opacity: 1;
 }
 
 .filter-pill {

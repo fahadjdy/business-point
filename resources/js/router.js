@@ -6,23 +6,28 @@ const Home = () => import('./Pages/Home.vue');
 const Maintenance = () => import('./Pages/Maintenance.vue');
 const UserDashboard = () => import('./Pages/User/Dashboard.vue');
 const UserSetting = () => import('./Pages/User/Setting.vue');
-const Dashboard = () => import('./Pages/Dashboard.vue');
-const VendorsIndex = () => import('./Pages/Vendors/Index.vue');
-const VendorsShow = () => import('./Pages/Vendors/Show.vue');
-const AuditLogs = () => import('./Pages/AuditLogs/Index.vue');
-const Settings = () => import('./Pages/Settings.vue');
+const Dashboard = () => import('./Pages/Admin/Dashboard/Index.vue');
+const VendorsIndex = () => import('./Pages/Admin/Vendors/Index.vue');
+const VendorsShow = () => import('./Pages/Admin/Vendors/Show.vue');
+const AuditLogs = () => import('./Pages/Admin/AuditLogs/Index.vue');
+const Settings = () => import('./Pages/Admin/Settings/Index.vue');
 const Login = () => import('./Pages/Auth/Login.vue');
 const UserLogin = () => import('./Pages/Auth/UserLogin.vue');
-const Profile = () => import('./Pages/Auth/Profile.vue');
-const NotificationsIndex = () => import('./Pages/Notifications/Index.vue');
-const AnnouncementsIndex = () => import('./Pages/Announcements/Index.vue');
+const Profile = () => import('./Pages/Admin/Profile/Index.vue');
+const NotificationsIndex = () => import('./Pages/Admin/Notifications/Index.vue');
+const AdminAnnouncementsIndex = () => import('./Pages/Admin/Announcements/Index.vue');
+const FrontendAnnouncementsIndex = () => import('./Pages/Announcements/Index.vue');
 const AnnouncementsPreview = () => import('./Pages/Announcements/Preview.vue');
 const CommunityDirectoryIndex = () => import('./Pages/CommunityDirectory/Index.vue');
 const CommunityDirectoryShow = () => import('./Pages/CommunityDirectory/Show.vue');
 const Register = () => import('./Pages/Auth/Register.vue');
-const VendorRegister = () => import('./Pages/Vendors/Register.vue');
-const EmergencyContactsIndex = () => import('./Pages/EmergencyContacts/Index.vue');
-const ContactBookAdminIndex = () => import('./Pages/ContactBook/AdminIndex.vue');
+const VendorRegister = () => import('./Pages/User/VendorRegister.vue');
+const EmergencyContactsIndex = () => import('./Pages/Admin/EmergencyContacts/Index.vue');
+const AdminBannersIndex = () => import('./Pages/Admin/Banners/Index.vue');
+const AdminBannersPreview = () => import('./Pages/Admin/Banners/Preview.vue');
+const ContactBookAdminIndex = () => import('./Pages/Admin/CommunityDirectory/Index.vue');
+const CommunityDirectoryPreview = () => import('./Pages/Admin/CommunityDirectory/Preview.vue');
+const AnnouncementPreview = () => import('./Pages/Admin/Announcements/Preview.vue');
 
 const routes = [
     {
@@ -67,9 +72,21 @@ const routes = [
         meta: { requiresAuth: true, title: 'Settings', layout: 'User', scope: 'user' }
     },
     {
+        path: '/user/manage-business',
+        name: 'user.manage-business',
+        component: () => import('./Pages/User/ManageBusiness.vue'),
+        meta: { requiresAuth: true, title: 'Manage Business', layout: 'User', scope: 'user' }
+    },
+    {
+        path: '/user/manage-products',
+        name: 'user.manage-products',
+        component: () => import('./Pages/User/ManageProducts.vue'),
+        meta: { requiresAuth: true, title: 'Manage Products', layout: 'User', scope: 'user' }
+    },
+    {
         path: '/announcements',
         name: 'announcements.index',
-        component: AnnouncementsIndex,
+        component: FrontendAnnouncementsIndex,
         meta: { layout: 'User' }
     },
     {
@@ -94,6 +111,12 @@ const routes = [
         path: '/register-business',
         name: 'business.register',
         component: VendorRegister,
+        meta: { requiresAuth: true, layout: 'User' }
+    },
+    {
+        path: '/register-business/success',
+        name: 'business.register.success',
+        component: () => import('./Pages/User/VendorRegisterSuccess.vue'),
         meta: { requiresAuth: true, layout: 'User' }
     },
     {
@@ -146,7 +169,7 @@ const routes = [
     {
         path: '/admin/notifications',
         name: 'admin.notifications',
-        component: NotificationsIndex,
+        component: AdminAnnouncementsIndex,
         meta: { requiresAuth: true, title: 'Announcements', layout: 'Admin', scope: 'admin' }
     },
     {
@@ -156,17 +179,35 @@ const routes = [
         meta: { requiresAuth: true, title: 'Emergency Contacts', layout: 'Admin', scope: 'admin' }
     },
     {
+        path: '/admin/banners',
+        name: 'admin.banners',
+        component: AdminBannersIndex,
+        meta: { requiresAuth: true, title: 'Banners', layout: 'Admin', scope: 'admin' }
+    },
+    {
+        path: '/admin/banners/:id/preview',
+        name: 'admin.banners.preview',
+        component: AdminBannersPreview,
+        meta: { requiresAuth: true, title: 'Banner Preview', layout: 'Admin', scope: 'admin' }
+    },
+    {
         path: '/admin/community-directory',
         name: 'admin.community-directory',
         component: ContactBookAdminIndex,
         meta: { requiresAuth: true, title: 'Community Directory', layout: 'Admin', scope: 'admin' }
     },
     {
-        path: '/admin/contact-logs',
-        name: 'admin.contact-logs',
-        component: () => import('./Pages/ContactBook/AuditLogs.vue'),
-        meta: { requiresAuth: true, title: 'Contact Logs', layout: 'Admin', scope: 'admin' }
-    }
+        path: '/admin/community-directory/:id/preview',
+        name: 'admin.community-directory.preview',
+        component: CommunityDirectoryPreview,
+        meta: { requiresAuth: true, title: 'Contact Preview', layout: 'Admin', scope: 'admin' }
+    },
+    {
+        path: '/admin/notifications/:id/preview',
+        name: 'admin.announcement.preview',
+        component: AnnouncementPreview,
+        meta: { requiresAuth: true, title: 'Announcement Preview', layout: 'Admin', scope: 'admin' }
+    },
 ];
 
 const router = createRouter({
@@ -177,27 +218,27 @@ const router = createRouter({
 // Navigation Guard
 router.beforeEach(async (to, from, next) => {
     const configStore = useConfigStore();
-    
+
     // Fetch settings if not initialized (except for maintenance page)
     if (!configStore.initialized && to.name !== 'maintenance') {
         await configStore.fetchSettings();
     }
-    
+
     // Check maintenance mode (except for admin routes and maintenance page itself)
     const isAdminPath = to.path.startsWith('/admin');
     const isMaintenancePage = to.name === 'maintenance';
-    
+
     if (!isAdminPath && !isMaintenancePage && configStore.isInMaintenanceMode()) {
         next({ name: 'maintenance' });
         return;
     }
-    
+
     // If on maintenance page but maintenance mode is disabled, redirect to home
     if (isMaintenancePage && !configStore.isInMaintenanceMode()) {
         next({ name: 'home' });
         return;
     }
-    
+
     const scope = to.meta.scope || (isAdminPath ? 'admin' : 'user');
     const isAdmin = scope === 'admin';
 

@@ -15,7 +15,7 @@ class Shop extends Model
     protected $fillable = [
         'vendor_id',
         'shop_name',
-        'category',
+        'shop_category_id', // Updated from category
         'description',
         'address',
         'price_display_enabled',
@@ -26,6 +26,11 @@ class Shop extends Model
     public function vendor()
     {
         return $this->belongsTo(Vendor::class);
+    }
+    
+    public function category()
+    {
+        return $this->belongsTo(ShopCategory::class, 'shop_category_id');
     }
 
     public function products()

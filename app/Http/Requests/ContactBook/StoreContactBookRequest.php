@@ -15,7 +15,10 @@ class StoreContactBookRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:150',
-            'phone' => 'required|string|max:20',
+            'phone' => 'nullable|string|max:20', // Made nullable as we use contact_numbers
+            'contact_numbers' => 'nullable|array|min:1',
+            'contact_numbers.*.number' => 'required|string|max:20',
+            'contact_numbers.*.type' => 'required|in:person,business,service',
             'email' => 'nullable|email|max:255',
             'designation' => 'nullable|string|max:255',
             'department' => 'nullable|string|max:255',
@@ -23,7 +26,6 @@ class StoreContactBookRequest extends FormRequest
             'description' => 'nullable|string',
             'type' => 'required|in:person,business,service',
             'is_active' => 'boolean',
-            'sort_order' => 'integer',
             'image' => 'nullable|image|max:2048',
             'tag_ids' => 'nullable|array',
             'tag_ids.*' => 'integer|exists:tags,id',
@@ -34,7 +36,8 @@ class StoreContactBookRequest extends FormRequest
     {
         return [
             'name.required' => 'Contact name is required.',
-            'phone.required' => 'Phone number is required.',
+            'contact_numbers.min' => 'At least one contact number is required.',
+            'contact_numbers.*.number.required' => 'All contact numbers must have a value.',
             'email.email' => 'Please provide a valid email address.',
             'type.required' => 'Contact type is required.',
             'type.in' => 'Contact type must be person, business, or service.',

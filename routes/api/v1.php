@@ -24,6 +24,7 @@ Route::middleware('api_key')->group(function () {
 
 // Protected User Routes (Specialized features for users)
 Route::middleware(['auth:sanctum', 'api_key'])->group(function () {
+    Route::get('/auth/user', [AuthController::class, 'user']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::post('/profile', [App\Http\Controllers\Admin\ProfileController::class, 'update']);
 
@@ -31,8 +32,10 @@ Route::middleware(['auth:sanctum', 'api_key'])->group(function () {
     Route::post('/shops', [ShopController::class, 'store']);
     Route::post('/doctors', [DoctorController::class, 'store']);
     Route::post('/barbers', [BarberController::class, 'store']);
-    Route::post('/shop-categories', [ShopProductCategoryController::class, 'store']);
+    Route::post('/shop-product-categories', [ShopProductCategoryController::class, 'store']); // Renamed
     Route::post('/shop-products', [ShopProductController::class, 'store']);
+    Route::put('/shop-products/{id}', [ShopProductController::class, 'update']);
+    Route::delete('/shop-products/{id}', [ShopProductController::class, 'destroy']);
     Route::post('/contacts', [ContactBookController::class, 'store']);
     Route::post('/banners', [BannerController::class, 'store']);
     Route::post('/media', [MediaController::class, 'store']);
@@ -45,14 +48,19 @@ Route::middleware(['auth:sanctum', 'api_key'])->group(function () {
     Route::get('/contacts-directory/{id}', [\App\Http\Controllers\Api\V1\ContactBookController::class, 'show']);
 
     // Register Business
-    Route::post('/register-business', [VendorController::class, 'store']);
+    Route::get('/register-business/status', [\App\Http\Controllers\Api\V1\VendorRegistrationController::class, 'checkStatus']);
+    Route::post('/register-business', [\App\Http\Controllers\Api\V1\VendorRegistrationController::class, 'store']);
+    // Vendor Management
+    Route::get('/my-business', [VendorController::class, 'myBusiness']);
+    Route::put('/my-business', [VendorController::class, 'update']);
 });
 
 // Public routes (Guest user view website)
 Route::middleware('api_key')->group(function () {
     Route::get('/vendors', [VendorController::class, 'index']);
     Route::get('/vendors/{id}', [VendorController::class, 'show']);
-    Route::get('/shop-categories', [ShopProductCategoryController::class, 'index']);
+    Route::get('/shop-product-categories', [ShopProductCategoryController::class, 'index']); // Renamed
+    Route::get('/shop-categories', [\App\Http\Controllers\Api\V1\ShopCategoryController::class, 'index']); // New Global Categories
     Route::get('/shop-products', [ShopProductController::class, 'index']);
     // Contact Directory (Legacy endpoints for backward compatibility)
     Route::get('/contacts', [ContactBookController::class, 'index']);

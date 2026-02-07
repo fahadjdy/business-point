@@ -29,7 +29,7 @@ class ContactBookController extends BaseController
             'is_active' => 'nullable|boolean',
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|min:1|max:100',
-            'sort_by' => 'nullable|string|in:name,created_at,sort_order',
+            'sort_by' => 'nullable|string|in:name,created_at',
             'sort_order' => 'nullable|string|in:asc,desc',
         ]);
 

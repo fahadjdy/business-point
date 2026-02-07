@@ -41,9 +41,9 @@
                 </div>
               </div>
 
-              <a :href="'tel:' + contact.phone" class="call-button">
+              <a v-if="primaryNumber" :href="'tel:' + primaryNumber" class="call-button">
                 <i class="fa-solid fa-phone"></i>
-                Call Now
+                Call {{ primaryNumber }}
               </a>
             </div>
           </div>
@@ -54,11 +54,14 @@
               <h2 class="section-title">Contact Information</h2>
               
               <div class="details-grid">
-                <div class="detail-item">
-                  <div class="detail-label">Phone Number</div>
+                <div v-for="num in contact.contact_numbers" :key="num.id" class="detail-item">
+                  <div class="detail-label">{{ num.type }} Number</div>
                   <div class="detail-value">
-                    <i class="fa-solid fa-phone detail-icon"></i>
-                    {{ contact.phone }}
+                    <i :class="getPhoneIcon(num.type)" class="detail-icon"></i>
+                    <a :href="'tel:' + num.number" class="phone-link">{{ num.number }}</a>
+                    <a v-if="num.type === 'whatsapp'" :href="'https://wa.me/' + num.number.replace(/[^0-9]/g, '')" target="_blank" class="whatsapp-link ml-2">
+                       <i class="fa-brands fa-whatsapp text-green-500"></i>
+                    </a>
                   </div>
                 </div>
 
@@ -86,13 +89,7 @@
                   </div>
                 </div>
 
-                <div v-if="contact.blood_group" class="detail-item">
-                  <div class="detail-label">Blood Group</div>
-                  <div class="detail-value">
-                    <i class="fa-solid fa-droplet detail-icon"></i>
-                    {{ contact.blood_group }}
-                  </div>
-                </div>
+
 
                 <div v-if="contact.address" class="detail-item full-width">
                   <div class="detail-label">Address</div>
@@ -150,6 +147,7 @@ import axios from 'axios';
 const route = useRoute();
 const contact = ref(null);
 const loading = ref(true);
+const primaryNumber = ref(null);
 
 const fetchContactDetails = async () => {
   loading.value = true;
@@ -159,11 +157,27 @@ const fetchContactDetails = async () => {
     });
     if (response.data.success) {
       contact.value = response.data.data;
+      
+      // Find primary number
+      if (contact.value.contact_numbers && contact.value.contact_numbers.length > 0) {
+        const primary = contact.value.contact_numbers.find(n => n.type === 'primary');
+        primaryNumber.value = primary ? primary.number : contact.value.contact_numbers[0].number;
+      } else {
+        primaryNumber.value = contact.value.phone;
+      }
     }
   } catch (error) {
     console.error('Error fetching contact details:', error);
   } finally {
     loading.value = false;
+  }
+};
+
+const getPhoneIcon = (type) => {
+  switch (type) {
+    case 'whatsapp': return 'fa-brands fa-whatsapp';
+    case 'landline': return 'fa-solid fa-phone-flip';
+    default: return 'fa-solid fa-phone';
   }
 };
 
@@ -423,13 +437,22 @@ onMounted(() => {
   width: 16px;
 }
 
-.email-link {
+.email-link, .phone-link {
   color: #3699ff;
   text-decoration: none;
 }
 
-.email-link:hover {
+.email-link:hover, .phone-link:hover {
   text-decoration: underline;
+}
+
+.whatsapp-link {
+  font-size: 1.2rem;
+  transition: transform 0.2s;
+}
+
+.whatsapp-link:hover {
+  transform: scale(1.1);
 }
 
 /* Skills Section */

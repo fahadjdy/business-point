@@ -142,15 +142,15 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue';
-import AdminLayout from '../../Layouts/AdminLayout.vue';
-import BaseButton from '../../Components/BaseButton.vue';
-import BaseInput from '../../Components/BaseInput.vue';
-import BaseSelect from '../../Components/BaseSelect.vue';
-import BaseAlert from '../../Components/BaseAlert.vue';
-import { useAuthStore } from '../../store/auth';
-import UserService from '../../services/UserService';
-import AppService from '../../services/AppService';
-import swal from '../../utils/swal';
+import AdminLayout from '@/Layouts/AdminLayout.vue';
+import BaseButton from '@/Components/BaseButton.vue';
+import BaseInput from '@/Components/BaseInput.vue';
+import BaseSelect from '@/Components/BaseSelect.vue';
+import BaseAlert from '@/Components/BaseAlert.vue';
+import { useAuthStore } from '@/store/auth';
+import UserService from '@/services/UserService';
+import AppService from '@/services/AppService';
+import swal from '@/utils/swal';
 
 const { state, updateProfile } = useAuthStore();
 const activeTab = ref('basic');

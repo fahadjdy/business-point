@@ -45,7 +45,7 @@ class RegistrationControlPropertyTest extends TestCase
 
             // Test API consistency - maintenance status endpoint includes registration status
             $response = $this->withHeaders([
-                'X-Api-Key' => 'business-point-secret-key'
+                'X-Api-Key' => config('services.auth_api_key')
             ])->getJson('/api/v1/maintenance-status');
             
             $response->assertStatus(200);
@@ -56,7 +56,7 @@ class RegistrationControlPropertyTest extends TestCase
 
             // Test company details endpoint includes registration status
             $companyResponse = $this->withHeaders([
-                'X-Api-Key' => 'business-point-secret-key'
+                'X-Api-Key' => config('services.auth_api_key')
             ])->getJson('/api/v1/company-details');
             
             $companyResponse->assertStatus(200);
@@ -102,7 +102,7 @@ class RegistrationControlPropertyTest extends TestCase
 
             // Verify the state is immediately reflected in all endpoints
             $statusResponse = $this->withHeaders([
-                'X-Api-Key' => 'business-point-secret-key'
+                'X-Api-Key' => config('services.auth_api_key')
             ])->getJson('/api/v1/maintenance-status');
             
             $statusData = $statusResponse->json('data');
@@ -112,7 +112,7 @@ class RegistrationControlPropertyTest extends TestCase
 
             // Verify company details endpoint reflects the change
             $companyResponse = $this->withHeaders([
-                'X-Api-Key' => 'business-point-secret-key'
+                'X-Api-Key' => config('services.auth_api_key')
             ])->getJson('/api/v1/company-details');
             
             $companyData = $companyResponse->json('data');
@@ -146,7 +146,7 @@ class RegistrationControlPropertyTest extends TestCase
 
         // API endpoints should return default value
         $response = $this->withHeaders([
-            'X-Api-Key' => 'business-point-secret-key'
+            'X-Api-Key' => config('services.auth_api_key')
         ])->getJson('/api/v1/maintenance-status');
         
         $data = $response->json('data');
@@ -186,7 +186,7 @@ class RegistrationControlPropertyTest extends TestCase
 
             // Test API response
             $response = $this->withHeaders([
-                'X-Api-Key' => 'business-point-secret-key'
+                'X-Api-Key' => config('services.auth_api_key')
             ])->getJson('/api/v1/maintenance-status');
             
             $data = $response->json('data');

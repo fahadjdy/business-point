@@ -16,6 +16,11 @@ class AuthController extends BaseController
         );
     }
 
+    public function user()
+    {
+        return $this->success(auth()->user()->load('vendor'));
+    }
+
     public function register(RegisterRequest $request, AuthService $service)
     {
         return $this->success(

@@ -157,7 +157,7 @@ const openLightbox = (startIndex) => {
   const image = overlay.querySelector('.lightbox-image');
   const counter = overlay.querySelector('.lightbox-counter');
   
-  const closeLightbox = () => {
+  let closeLightbox = () => {
     document.body.removeChild(overlay);
     document.body.style.overflow = '';
   };

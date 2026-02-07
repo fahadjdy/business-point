@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Admin\Vendors;
 
 use App\Http\Controllers\Controller;
 use App\Services\VendorService;
@@ -20,7 +20,7 @@ class VendorController extends Controller
     {
         return response()->json([
             'success' => true,
-            'data' => $this->service->getPaginated($request->query('per_page', 10), $request->all())
+            'data' => $this->service->getPaginated($request->query('per_page', 10), $request->all(), ['user'])
         ]);
     }
 
@@ -38,6 +38,24 @@ class VendorController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Vendor deleted successfully',
+        ]);
+    }
+
+    public function approve(int $id)
+    {
+        $this->service->updateStatus($id, 'approved');
+        return response()->json([
+            'success' => true,
+            'message' => 'Vendor approved successfully',
+        ]);
+    }
+
+    public function reject(int $id)
+    {
+        $this->service->updateStatus($id, 'rejected', request('reason'));
+        return response()->json([
+            'success' => true,
+            'message' => 'Vendor rejected successfully',
         ]);
     }
 }

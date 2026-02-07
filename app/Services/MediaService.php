@@ -15,13 +15,21 @@ class MediaService extends BaseService
         parent::__construct($repository);
     }
 
-    /**
-     * Upload a file and associate it with a model.
-     */
-    public function upload(UploadedFile $file, $model, string $collection = 'default', bool $isPrimary = false, bool $withResize = false): Media
+    public function upload(UploadedFile $file, $model, $arg3 = 'default', bool $arg4 = false, bool $arg5 = false): Media
     {
-        $modelType = get_class($model);
-        $modelId = $model->id;
+        if ($model instanceof Model) {
+            $modelType = get_class($model);
+            $modelId = $model->id;
+            $collection = is_string($arg3) ? $arg3 : 'default';
+            $isPrimary = $arg4;
+            $withResize = $arg5;
+        } else {
+            $modelType = (string)$model;
+            $modelId = (int)$arg3;
+            $collection = 'default';
+            $isPrimary = $arg4;
+            $withResize = $arg5;
+        }
         
         // Custom Filename: date-month-year-timestamp-filename
         $timestamp = now()->timestamp;
@@ -56,24 +64,27 @@ class MediaService extends BaseService
     /**
      * Upload a file with automatic image resizing
      */
-    public function uploadWithResize(UploadedFile $file, string $modelType, int $modelId, bool $isPrimary = false): Media
+    public function uploadWithResize(UploadedFile $file, $model, $arg3 = null, bool $isPrimary = false): Media
     {
-        // Upload original file
-        $media = $this->upload($file, $modelType, $modelId, $isPrimary);
-
-        // If it's an image, create resized versions
-        if ($media->isImage()) {
-            $this->createResizedVersions($media, $file);
+        if ($model instanceof Model) {
+            return $this->upload($file, $model, 'default', $isPrimary, true);
         }
-
-        return $media;
+        
+        return $this->upload($file, $model, $arg3, $isPrimary, true);
     }
+
 
     /**
      * Create resized versions of an image
      */
     protected function createResizedVersions(Media $media, UploadedFile $file): void
     {
+        // Check if GD extension is loaded
+        if (!\extension_loaded('gd')) {
+            \Log::warning('GD extension NOT loaded. Skipping image resizing.');
+            return;
+        }
+
         $sizes = [
             'thumbnail' => ['width' => 150, 'height' => 150],
             'medium' => ['width' => 400, 'height' => 400],
@@ -90,7 +101,7 @@ class MediaService extends BaseService
     protected function resizeImage(Media $media, string $sourceFilePath, string $sizeName, int $width, int $height): void
     {
         // Get image info
-        $imageInfo = getimagesize($sourceFilePath);
+        $imageInfo = \getimagesize($sourceFilePath);
         if (!$imageInfo) {
             return; // Not a valid image
         }
@@ -117,18 +128,18 @@ class MediaService extends BaseService
         }
 
         // Create new image
-        $resizedImage = imagecreatetruecolor($newWidth, $newHeight);
+        $resizedImage = \imagecreatetruecolor($newWidth, $newHeight);
         
         // Preserve transparency for PNG and GIF
         if ($imageType == IMAGETYPE_PNG || $imageType == IMAGETYPE_GIF) {
-            imagealphablending($resizedImage, false);
-            imagesavealpha($resizedImage, true);
-            $transparent = imagecolorallocatealpha($resizedImage, 255, 255, 255, 127);
-            imagefill($resizedImage, 0, 0, $transparent);
+            \imagealphablending($resizedImage, false);
+            \imagesavealpha($resizedImage, true);
+            $transparent = \imagecolorallocatealpha($resizedImage, 255, 255, 255, 127);
+            \imagefill($resizedImage, 0, 0, $transparent);
         }
 
         // Resize the image
-        imagecopyresampled(
+        \imagecopyresampled(
             $resizedImage, $sourceImage,
             0, 0, 0, 0,
             $newWidth, $newHeight,
@@ -148,8 +159,8 @@ class MediaService extends BaseService
         $this->saveImageToFile($resizedImage, $fullPath, $imageType);
 
         // Clean up memory
-        imagedestroy($sourceImage);
-        imagedestroy($resizedImage);
+        \imagedestroy($sourceImage);
+        \imagedestroy($resizedImage);
     }
 
     /**
@@ -159,13 +170,13 @@ class MediaService extends BaseService
     {
         switch ($imageType) {
             case IMAGETYPE_JPEG:
-                return imagecreatefromjpeg($filePath);
+                return \imagecreatefromjpeg($filePath);
             case IMAGETYPE_PNG:
-                return imagecreatefrompng($filePath);
+                return \imagecreatefrompng($filePath);
             case IMAGETYPE_GIF:
-                return imagecreatefromgif($filePath);
+                return \imagecreatefromgif($filePath);
             case IMAGETYPE_WEBP:
-                return imagecreatefromwebp($filePath);
+                return \imagecreatefromwebp($filePath);
             default:
                 return false;
         }
@@ -178,16 +189,16 @@ class MediaService extends BaseService
     {
         switch ($imageType) {
             case IMAGETYPE_JPEG:
-                imagejpeg($imageResource, $filePath, 85);
+                \imagejpeg($imageResource, $filePath, 85);
                 break;
             case IMAGETYPE_PNG:
-                imagepng($imageResource, $filePath, 8);
+                \imagepng($imageResource, $filePath, 8);
                 break;
             case IMAGETYPE_GIF:
-                imagegif($imageResource, $filePath);
+                \imagegif($imageResource, $filePath);
                 break;
             case IMAGETYPE_WEBP:
-                imagewebp($imageResource, $filePath, 85);
+                \imagewebp($imageResource, $filePath, 85);
                 break;
         }
     }

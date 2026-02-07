@@ -48,14 +48,10 @@ class ContactBookRepository extends BaseRepository
         }
 
         // Apply sorting
-        $sortBy = $params['sort_by'] ?? 'sort_order';
+        $sortBy = $params['sort_by'] ?? 'name';
         $sortOrder = $params['sort_order'] ?? 'asc';
 
-        if ($sortBy === 'sort_order') {
-            $query->ordered();
-        } else {
-            $query->orderBy($sortBy, $sortOrder);
-        }
+        $query->orderBy($sortBy, $sortOrder);
 
         return $query->paginate($perPage);
     }

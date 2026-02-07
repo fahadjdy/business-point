@@ -20,7 +20,7 @@ class UpdateNotificationRequest extends FormRequest
             'is_active' => 'nullable|boolean',
             'is_scheduled' => 'nullable|boolean',
             'scheduled_at' => 'nullable|date',
-            'sort_order' => 'nullable|integer',
+            'scheduled_at' => 'nullable|date',
             'images' => 'nullable|array',
             'images.*' => 'image|max:2048', // 2MB Max per image
             'delete_images' => 'nullable|array',

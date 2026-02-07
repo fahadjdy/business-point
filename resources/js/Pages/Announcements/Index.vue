@@ -1,146 +1,199 @@
 <template>
-  <div class="announcements-page">
-    <div class="content-container">
+  <div class="announcement-page">
+    <div class="container">
       
-      <!-- Search Section -->
-      <div class="search-section mb-10">
-        <div class="search-container shadow-sm">
-            <div class="search-wrapper">
-                <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                <input 
-                    type="text" 
-                    v-model="searchKeyword" 
-                    placeholder="Search announcements..." 
-                    class="search-input"
-                    @input="debounceSearch"
-                >
+      <!-- Header -->
+      <div class="page-header">
+        <nav class="breadcrumbs">
+          <router-link to="/" class="breadcrumb-item">Home</router-link>
+          <span class="separator">›</span>
+          <span class="breadcrumb-item active">Announcements</span>
+        </nav>
+        <h1 class="page-title">Village Announcements</h1>
+        <p class="page-subtitle">Stay updated with the latest news, maintenance schedules, and community alerts.</p>
+      </div>
+
+      <!-- Search and Filter Bar -->
+      <div class="search-bar-container">
+        <div class="search-input-wrapper">
+          <i class="fa-solid fa-magnifying-glass search-icon"></i>
+          <input 
+            type="text" 
+            v-model="searchKeyword"
+            @input="debounceSearch"
+            class="search-input"
+            placeholder="Search village announcements..."
+          >
+        </div>
+        
+        <div class="filter-controls">
+          <span class="filter-label">Filter priority:</span>
+          <div class="filter-buttons">
+            <button 
+                @click="setPriority('')"
+                class="filter-btn"
+                :class="{ active: selectedPriority === '' }"
+            >
+                All
+            </button>
+            <button 
+                @click="setPriority('important')"
+                class="filter-btn"
+                :class="{ active: selectedPriority === 'important' }"
+            >
+                Important
+            </button>
+            <button 
+                @click="setPriority('normal')"
+                class="filter-btn"
+                :class="{ active: selectedPriority === 'normal' }"
+            >
+                Normal
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-grid">
+        
+        <!-- Main Content: Announcements List -->
+        <div class="main-column">
+          
+          <div v-if="loading" class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading announcements...</p>
+          </div>
+
+          <template v-else-if="announcements.length > 0">
+            <div 
+              v-for="announcement in announcements" 
+              :key="announcement.id"
+              class="announcement-card"
+              :class="announcement.priority?.toLowerCase()"
+            >
+              <div class="card-content">
+                <div class="card-header">
+                  <span 
+                    class="priority-badge"
+                    :class="announcement.priority?.toLowerCase()"
+                  >
+                    {{ announcement.priority || 'Normal' }}
+                  </span>
+                  <span class="post-date">Posted: {{ formatDate(announcement.created_at) }}</span>
+                </div>
+                
+                <h3 class="card-title">{{ announcement.title }}</h3>
+                
+                <p class="card-message">
+                  {{ announcement.message }}
+                </p>
+                
+                <div class="card-footer">
+                    <router-link 
+                      :to="{ name: 'announcements.preview', params: { id: announcement.id } }"
+                      class="read-more-link"
+                    >
+                      Read Full Announcement <i class="fa-solid fa-arrow-right arrow-icon"></i>
+                    </router-link>
+                    
+                    <button 
+                         @click.prevent="shareAnnouncement(announcement)"
+                         class="share-btn"
+                         title="Share"
+                    >
+                         <i class="fa-solid fa-share"></i>
+                    </button>
+                </div>
+              </div>
             </div>
-            
-            <div class="filter-row">
-               <!-- Date Filter -->
-               <div class="date-filters">
-                  <input 
-                    type="date" 
-                    v-model="dateFrom" 
-                    class="date-input"
-                    @change="fetchAnnouncements(1)"
-                  >
-                  <span class="date-separator">to</span>
-                  <input 
-                    type="date" 
-                    v-model="dateTo" 
-                    class="date-input"
-                    @change="fetchAnnouncements(1)"
-                  >
-                  <button 
-                    v-if="dateFrom || dateTo" 
-                    @click="clearDateFilter" 
-                    class="clear-date-btn"
-                  >
-                    <i class="fa-solid fa-xmark"></i>
-                  </button>
+
+            <!-- Load More Button -->
+            <div v-if="pagination.last_page > pagination.current_page" class="load-more-container">
+               <button 
+                  @click="loadMore" 
+                  class="load-more-btn"
+                  :disabled="loadingMore"
+               >
+                  {{ loadingMore ? 'Loading...' : 'Load More Announcements' }}
+               </button>
+            </div>
+          </template>
+
+          <div v-else class="empty-state">
+            <i class="fa-regular fa-bell empty-icon"></i>
+            <h3>No announcements found</h3>
+            <p>Try adjusting your search or filter options.</p>
+            <button @click="resetFilters" class="reset-link">
+                Clear all filters
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Sidebar Widgets -->
+        <div class="sidebar-column">
+          
+          <!-- Recent Alerts Widget -->
+          <div class="widget">
+            <h3 class="widget-title">
+               <i class="fa-solid fa-triangle-exclamation icon-alert"></i> Recent Alerts
+            </h3>
+            <div class="widget-list">
+               <div v-for="alert in recentAlerts" :key="alert.id" class="widget-item alert-item">
+                  <div class="item-date">{{ alert.date }}</div>
+                  <h4 class="item-title">{{ alert.title }}</h4>
                </div>
             </div>
-        </div>
-      </div>
+          </div>
 
-      <!-- Loading State -->
-       <div v-if="loading" class="loading-state">
-         <div class="spinner"></div>
-         <p>Loading announcements...</p>
-      </div>
-
-      <!-- Listings -->
-      <div v-else-if="announcements.length > 0" class="announcement-list">
-        <div 
-          v-for="announcement in announcements" 
-          :key="announcement.id" 
-          class="announcement-card shadow-sm"
-        >
-           <div class="card-left">
-              <div class="card-icon-wrapper">
-                 <img v-if="announcement.image" :src="announcement.image" class="card-img" />
-                 <i v-else class="fa-solid fa-bullhorn"></i>
-              </div>
-           </div>
-
-           <div class="card-body">
-              <div class="card-header">
-                 <h3 class="card-title">{{ announcement.title }}</h3>
-                 <span class="card-date">{{ formatDate(announcement.created_at) }}</span>
-              </div>
-              
-              <div class="card-content">
-                 <p class="card-description">{{ truncateText(announcement.message, 150) }}</p>
-              </div>
-              
-              <!-- Meta Info -->
-              <div class="card-meta">
-                 <span v-if="announcement.scheduled_at" class="meta-item scheduled">
-                    <i class="fa-solid fa-clock mr-1"></i> 
-                    Scheduled: {{ formatDate(announcement.scheduled_at) }}
-                 </span>
-                 <span v-if="announcement.is_urgent" class="meta-item urgent">
-                    <i class="fa-solid fa-exclamation-triangle mr-1"></i> 
-                    Urgent
-                 </span>
-              </div>
-           </div>
-
-           <div class="card-actions">
-              <router-link 
-                :to="{ name: 'announcements.preview', params: { id: announcement.id } }"
-                class="btn-action btn-primary"
-              >
-                Read More
-              </router-link>
-           </div>
-        </div>
-      </div>
-
-       <!-- Empty State -->
-      <div v-else class="empty-state">
-        <i class="fa-regular fa-bell empty-icon"></i>
-        <h3>No announcements found</h3>
-        <p>There are no announcements matching your search criteria.</p>
-        <button @click="resetFilters" class="btn-link">Reset Filters</button>
-      </div>
-
-      <!-- Pagination -->
-      <div v-if="pagination.last_page > 1" class="pagination-container">
-            <button 
-              :disabled="pagination.current_page === 1" 
-              @click="fetchAnnouncements(pagination.current_page - 1)"
-              class="page-btn prev"
-            >
-               <i class="fa-solid fa-chevron-left"></i>
-            </button>
-            
-            <template v-for="p in getVisiblePages()" :key="p">
-              <button 
-                v-if="p !== '...'"
-                @click="fetchAnnouncements(p)"
-                class="page-btn"
-                :class="{ active: pagination.current_page === p }"
-              >
-                {{ p }}
-              </button>
-              <span v-else class="page-ellipsis">...</span>
-            </template>
-
-            <button 
-              :disabled="pagination.current_page === pagination.last_page" 
-              @click="fetchAnnouncements(pagination.current_page + 1)"
-              class="page-btn next"
-            >
-               <i class="fa-solid fa-chevron-right"></i>
-            </button>
-            
-            <div class="pagination-info">
-              Showing {{ ((pagination.current_page - 1) * 20) + 1 }} to {{ Math.min(pagination.current_page * 20, pagination.total) }} of {{ pagination.total }} announcements
+          <!-- Village Events Widget -->
+          <div class="widget">
+             <h3 class="widget-title">
+               <i class="fa-solid fa-calendar-day icon-event"></i> Village Events
+            </h3>
+            <div class="widget-list">
+               <div v-for="event in villageEvents" :key="event.id" class="event-item">
+                  <div class="event-date-box">
+                     <span class="event-month">{{ event.month }}</span>
+                     <span class="event-day">{{ event.day }}</span>
+                  </div>
+                  <div class="event-details">
+                     <h4 class="event-title">{{ event.title }}</h4>
+                     <p class="event-info">{{ event.time }} • {{ event.location }}</p>
+                  </div>
+               </div>
             </div>
-      </div>
+            <button class="view-calendar-btn">
+               View Full Calendar
+            </button>
+          </div>
 
+          <!-- Quick Resources Widget -->
+          <div class="widget resources-widget">
+             <h3 class="widget-title">
+               Quick Resources
+            </h3>
+            <div class="resource-list">
+               <a href="#" class="resource-link">
+                  <span>Contact Village Office</span>
+                  <i class="fa-solid fa-arrow-up-right-from-square link-icon"></i>
+               </a>
+               <div class="divider"></div>
+               <a href="#" class="resource-link">
+                  <span>Report an Issue</span>
+                  <i class="fa-solid fa-arrow-up-right-from-square link-icon"></i>
+               </a>
+               <div class="divider"></div>
+               <a href="#" class="resource-link">
+                  <span>Waste Collection PDF</span>
+                  <i class="fa-solid fa-download link-icon"></i>
+               </a>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
     </div>
   </div>
 </template>
@@ -150,24 +203,38 @@ import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import { debounce } from 'lodash';
 
+// State
 const announcements = ref([]);
 const loading = ref(true);
+const loadingMore = ref(false);
 const searchKeyword = ref('');
-const dateFrom = ref('');
-const dateTo = ref('');
+const selectedPriority = ref('');
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 });
 
-const fetchAnnouncements = async (page = 1) => {
-  loading.value = true;
+// Sidebar Dummy Data
+const recentAlerts = [
+   { id: 1, date: 'Oct 24', title: 'Water Main Break - Sector 4 Repairs in Progress' },
+   { id: 2, date: 'Oct 18', title: 'Emergency Council Meeting: Budget Finalization' },
+   { id: 3, date: 'Oct 15', title: 'Storm Surge Advisory: Secure Outdoor Equipment' },
+];
+
+const villageEvents = [
+   { id: 1, month: 'OCT', day: '28', title: 'Farmers Market', time: '8:00 AM', location: 'Village Square' },
+   { id: 2, month: 'OCT', day: '31', title: 'Halloween Parade', time: '6:30 PM', location: 'Community Center' },
+   { id: 3, month: 'NOV', day: '04', title: 'Art in the Park', time: '10:00 AM', location: 'South Green' },
+];
+
+const fetchAnnouncements = async (page = 1, append = false) => {
+  if (!append) loading.value = true;
+  else loadingMore.value = true;
+
   try {
     const params = {
       page,
-      per_page: 20
+      per_page: 10,
+      search: searchKeyword.value,
+      priority: selectedPriority.value
     };
-    
-    if (searchKeyword.value) params.search = searchKeyword.value;
-    if (dateFrom.value) params.date_from = dateFrom.value;
-    if (dateTo.value) params.date_to = dateTo.value;
 
     const response = await axios.get('/api/v1/notifications', { 
       params,
@@ -176,7 +243,13 @@ const fetchAnnouncements = async (page = 1) => {
     
     if (response.data.success) {
       const result = response.data.data;
-      announcements.value = result.data || [];
+      
+      if (append) {
+         announcements.value = [...announcements.value, ...result.data];
+      } else {
+         announcements.value = result.data || [];
+      }
+      
       pagination.value = {
         current_page: result.current_page,
         last_page: result.last_page,
@@ -187,6 +260,7 @@ const fetchAnnouncements = async (page = 1) => {
     console.error('Error fetching announcements:', error);
   } finally {
     loading.value = false;
+    loadingMore.value = false;
   }
 };
 
@@ -194,78 +268,44 @@ const debounceSearch = debounce(() => {
   fetchAnnouncements(1);
 }, 500);
 
-const clearDateFilter = () => {
-  dateFrom.value = '';
-  dateTo.value = '';
-  fetchAnnouncements(1);
+const setPriority = (priority) => {
+   selectedPriority.value = priority;
+   fetchAnnouncements(1);
+};
+
+const loadMore = () => {
+   if (pagination.value.current_page < pagination.value.last_page) {
+      fetchAnnouncements(pagination.value.current_page + 1, true);
+   }
 };
 
 const resetFilters = () => {
   searchKeyword.value = '';
-  dateFrom.value = '';
-  dateTo.value = '';
+  selectedPriority.value = '';
   fetchAnnouncements(1);
 };
 
-const viewAnnouncement = (announcement) => {
-  selectedAnnouncement.value = announcement;
-};
-
 const formatDate = (dateString) => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+   if (!dateString) return '';
+   const options = { year: 'numeric', month: 'short', day: 'numeric' };
+   return new Date(dateString).toLocaleDateString('en-US', options);
 };
 
-const truncateText = (text, length) => {
-  if (!text) return '';
-  return text.length > length ? text.substring(0, length) + '...' : text;
-};
+const shareAnnouncement = (item) => {
+  const shareUrl = `${window.location.origin}/announcements/${item.id}`;
+  const shareText = `Check out this announcement: ${item.title}`;
 
-const getVisiblePages = () => {
-  const current = pagination.value.current_page;
-  const total = pagination.value.last_page;
-  const pages = [];
-  
-  if (total <= 7) {
-    // Show all pages if 7 or fewer
-    for (let i = 1; i <= total; i++) {
-      pages.push(i);
-    }
+  if (navigator.share) {
+    navigator.share({
+      title: item.title,
+      text: shareText,
+      url: shareUrl,
+    });
   } else {
-    // Always show first page
-    pages.push(1);
-    
-    if (current > 4) {
-      pages.push('...');
-    }
-    
-    // Show pages around current
-    const start = Math.max(2, current - 1);
-    const end = Math.min(total - 1, current + 1);
-    
-    for (let i = start; i <= end; i++) {
-      if (!pages.includes(i)) {
-        pages.push(i);
-      }
-    }
-    
-    if (current < total - 3) {
-      pages.push('...');
-    }
-    
-    // Always show last page
-    if (!pages.includes(total)) {
-      pages.push(total);
-    }
+    navigator.clipboard.writeText(`${shareText} ${shareUrl}`).then(() => {
+      alert('Announcement link copied to clipboard!');
+    });
   }
-  
-  return pages;
 };
 
 onMounted(() => {
@@ -274,347 +314,502 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.announcements-page {
-  background: #f8fafd;
+/* Page Layout */
+.announcement-page {
+  background-color: #f8f9fa; /* Light gray background like screenshot */
   min-height: 100vh;
-}
-
-.content-container {
-  max-width: 1100px;
-  margin: 0 auto;
   padding: 40px 20px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #333;
 }
 
-/* Search Section */
-.search-container {
-    background: white;
-    padding: 30px;
-    border-radius: 20px;
-    margin-bottom: 20px;
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.search-wrapper {
-  background: #f3f6f9;
-  border-radius: 12px;
+/* Header */
+.page-header {
+  margin-bottom: 30px;
+}
+
+.breadcrumbs {
+  font-size: 14px;
+  color: #6c757d;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
-  padding: 8px 15px;
-  margin-bottom: 20px;
-  border: 1px solid transparent;
-  transition: all 0.2s;
 }
 
-.search-wrapper:focus-within {
-    background: white;
-    border-color: #3699ff;
-    box-shadow: 0 0 0 3px rgba(54, 153, 255, 0.1);
+.breadcrumb-item {
+  color: #6c757d;
+  text-decoration: none;
+}
+
+.breadcrumb-item:hover {
+  color: #343a40;
+}
+
+.breadcrumb-item.active {
+  color: #212529;
+  font-weight: 500;
+}
+
+.separator {
+  margin: 0 8px;
+  color: #adb5bd;
+}
+
+.page-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #212529;
+  margin: 0 0 8px 0;
+}
+
+.page-subtitle {
+  font-size: 16px;
+  color: #6c757d;
+  margin: 0;
+}
+
+/* Search Bar */
+.search-bar-container {
+  background: white;
+  border-radius: 8px;
+  padding: 15px 20px;
+  margin-bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+  border: 1px solid #e9ecef;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.search-input-wrapper {
+  position: relative;
+  flex: 1;
+  max-width: 500px;
+  min-width: 300px;
 }
 
 .search-icon {
-  color: #b5b5c3;
-  font-size: 1.2rem;
-  margin-right: 15px;
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #adb5bd;
 }
 
 .search-input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  padding: 10px 0;
-  font-size: 1.1rem;
+  width: 100%;
+  padding: 10px 10px 10px 35px;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  background-color: #f8f9fa;
+  font-size: 14px;
   outline: none;
-  font-weight: 500;
-  color: #3f4254;
+  transition: all 0.2s;
 }
 
-.filter-row {
+.search-input:focus {
+  background-color: white;
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+.filter-controls {
   display: flex;
-  justify-content: flex-start;
   align-items: center;
-  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.filter-label {
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 5px;
+}
+
+.filter-btn {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 14px;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.filter-btn:hover {
+  background: #e2e6ea;
+}
+
+.filter-btn.active {
+  background: #e7f1ff; /* Light blue active */
+  color: #0056b3;
+  border-color: #b8daff;
+}
+
+.filter-btn:nth-child(2).active { /* Important active */
+    background: #f8d7da;
+    color: #721c24;
+    border-color: #f5c6cb;
+}
+
+/* Grid Layout */
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 350px; /* Main column take rest, Sidebar 350px */
+  gap: 30px;
+}
+
+/* Announcements Column */
+.main-column {
+  display: flex;
+  flex-direction: column;
   gap: 20px;
 }
 
-.date-filters {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.date-input {
-  padding: 8px 12px;
-  border: 1px solid #e1e3ea;
-  border-radius: 8px;
-  background: #f9f9fc;
-  font-size: 0.9rem;
-  color: #3f4254;
-}
-
-.date-input:focus {
-  border-color: #3699ff;
-  background: white;
-  outline: none;
-}
-
-.date-separator {
-  color: #7e8299;
-  font-weight: 500;
-  font-size: 0.9rem;
-}
-
-.clear-date-btn {
-  background: #f64e60;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 0.8rem;
-}
-
-/* Listings */
-.announcement-list {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
 .announcement-card {
-    background: white;
-    border-radius: 16px;
-    padding: 25px;
-    display: flex;
-    align-items: flex-start;
-    gap: 25px;
-    transition: all 0.3s;
-    border: 1px solid #eff2f5;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  overflow: hidden;
+  border-left: 4px solid #007bff; /* Default/Normal border color */
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .announcement-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-    border-color: #3699ff;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.08);
 }
 
-.card-left { flex-shrink: 0; }
-
-.card-icon-wrapper {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.8rem;
-    background: #fff4de;
-    color: #ffa800;
-    overflow: hidden;
-}
-
-.card-img { width: 100%; height: 100%; object-fit: cover; }
-
-.card-body { flex: 1; }
-
-.card-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 15px;
-    margin-bottom: 10px;
-}
-
-.card-title {
-    margin: 0;
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #181c32;
-    line-height: 1.3;
-}
-
-.card-date {
-    font-size: 0.85rem;
-    color: #b5b5c3;
-    font-weight: 500;
-    white-space: nowrap;
+.announcement-card.important {
+  border-left-color: #ff5252; /* Important Red Border */
 }
 
 .card-content {
-    margin-bottom: 15px;
+  padding: 25px;
 }
 
-.card-description {
-    margin: 0;
-    color: #5e6278;
-    font-weight: 500;
-    line-height: 1.6;
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
 }
 
-.card-meta {
-    display: flex;
-    gap: 15px;
-    flex-wrap: wrap;
+.priority-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
 }
 
-.meta-item {
-    font-size: 0.8rem;
-    font-weight: 600;
+.priority-badge.normal {
+  background: #e7f1ff;
+  color: #0056b3;
+}
+
+.priority-badge.important {
+  background: #ffcdd2; /* Light red */
+  color: #c62828;
+}
+
+.post-date {
+  font-size: 12px;
+  color: #adb5bd;
+  font-weight: 600;
+}
+
+.card-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #212529;
+  margin: 0 0 10px 0;
+  line-height: 1.4;
+}
+
+.card-message {
+  font-size: 15px;
+  color: #6c757d;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.read-more-link {
+  color: #007bff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.read-more-link:hover {
+  color: #0056b3;
+}
+
+.arrow-icon {
+  font-size: 12px;
+}
+
+.share-btn {
+  background: none;
+  border: none;
+  color: #adb5bd;
+  cursor: pointer;
+  font-size: 16px;
+  transition: color 0.2s;
+}
+
+.share-btn:hover {
+  color: #007bff;
+}
+
+.load-more-btn {
+  width: 100%;
+  padding: 12px;
+  background: white;
+  border: 1px solid #e1e3ea;
+  border-radius: 8px;
+  color: #495057;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.load-more-btn:hover {
+  background: #f8f9fa;
+  border-color: #ced4da;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    background: white;
+    padding: 50px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+.empty-icon { font-size: 3rem; color: #e9ecef; margin-bottom: 15px; }
+.reset-link { color: #007bff; background: none; border: none; font-weight: 600; cursor: pointer; text-decoration: underline; margin-top: 10px; }
+
+
+/* Sidebar Column */
+.sidebar-column {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.widget {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border: 1px solid #f1f3f5;
+}
+
+.widget-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #adb5bd;
+    margin: 0 0 15px 0;
+    letter-spacing: 0.5px;
     display: flex;
     align-items: center;
 }
 
-.meta-item.scheduled {
-    color: #3699ff;
+.icon-alert { color: #ff5252; margin-right: 8px; }
+.icon-event { color: #007bff; margin-right: 8px; }
+
+.widget-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
-.meta-item.urgent {
-    color: #f64e60;
-}
-
-/* Actions */
-.card-actions {
-    display: flex;
-    align-items: flex-start;
-    padding-top: 5px;
-}
-
-.btn-action {
-    padding: 10px 24px;
-    border-radius: 10px;
-    font-weight: 700;
-    text-decoration: none;
-    text-align: center;
-    transition: all 0.2s;
-    white-space: nowrap;
-    border: none;
+.alert-item {
     cursor: pointer;
 }
+.alert-item:hover .item-title { color: #007bff; }
 
-.btn-primary {
-    background: #3699ff;
-    color: white;
-    box-shadow: 0 4px 12px rgba(54, 153, 255, 0.2);
+.item-date {
+    font-size: 11px;
+    color: #adb5bd;
+    font-weight: 600;
+    margin-bottom: 2px;
 }
 
-.btn-primary:hover {
-    background: #0084ff;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(54, 153, 255, 0.3);
+.item-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #343a40;
+    margin: 0;
+    line-height: 1.4;
+    transition: color 0.2s;
 }
 
-/* Utilities */
-.shadow-sm { box-shadow: 0 0 20px 0 rgba(76,87,125,0.02); }
-.mb-10 { margin-bottom: 40px; }
-.mr-1 { margin-right: 5px; }
+/* Event Items */
+.event-item {
+    display: flex;
+    gap: 12px;
+}
+
+.event-date-box {
+    width: 50px;
+    height: 50px;
+    background: #e7f1ff;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #b8daff;
+    flex-shrink: 0;
+}
+
+.event-month {
+    font-size: 10px;
+    font-weight: 700;
+    color: #007bff;
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+.event-day {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0056b3;
+    line-height: 1;
+}
+
+.event-details {
+    flex: 1;
+}
+
+.event-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #212529;
+    margin: 0 0 2px 0;
+}
+
+.event-info {
+    font-size: 12px;
+    color: #6c757d;
+    margin: 0;
+}
+
+.view-calendar-btn {
+    width: 100%;
+    margin-top: 15px;
+    padding: 8px;
+    background: white;
+    border: 1px solid #e7f1ff;
+    color: #007bff;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.view-calendar-btn:hover {
+    background: #e7f1ff;
+}
+
+/* Resources Widget */
+.resources-widget {
+    background: #e7f1ff;
+    border-color: #b8daff;
+}
+
+.resources-widget .widget-title {
+    color: #6c757d;
+}
+
+.resource-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.resource-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-decoration: none;
+    color: #495057;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 0;
+    transition: color 0.2s;
+}
+
+.resource-link:hover {
+    color: #007bff;
+}
+
+.link-icon {
+    font-size: 12px;
+    color: #adb5bd;
+}
+
+.resource-link:hover .link-icon {
+    color: #007bff;
+}
+
+.divider {
+    height: 1px;
+    background: rgba(0,123,255, 0.1);
+}
 
 /* Responsive */
-@media (max-width: 768px) {
-    .announcement-card { 
-      flex-direction: column; 
-      text-align: center; 
-      padding: 20px; 
+@media (max-width: 992px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 576px) {
+    .search-bar-container {
+        flex-direction: column;
+        align-items: stretch;
     }
     
-    .card-header { 
-      flex-direction: column; 
-      align-items: center; 
-      text-align: center;
+    .search-input-wrapper {
+        max-width: none;
     }
     
-    .card-meta {
-      justify-content: center;
-    }
-    
-    .modal-content {
-      margin: 10px;
-    }
-    
-    .modal-header,
-    .modal-body {
-      padding: 20px;
+    .filter-controls {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
-
-/* Loading & Empty */
-.loading-state, .empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: #b5b5c3;
-}
-.empty-icon { font-size: 4rem; opacity: 0.5; margin-bottom: 15px; }
-.btn-link { 
-    background: none; border: none; 
-    color: #3699ff; font-weight: 700; 
-    cursor: pointer; text-decoration: underline; 
-    margin-top: 10px;
-}
-
-/* Pagination */
-.pagination-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    margin-top: 50px;
-    flex-wrap: wrap;
-}
-
-.page-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    border: 1px solid #e1e3ea;
-    background: white;
-    color: #7e8299;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.page-btn.active {
-    background: #3699ff;
-    color: white;
-    border-color: #3699ff;
-    box-shadow: 0 4px 10px rgba(54, 153, 255, 0.3);
-}
-
-.page-btn:hover:not(.active):not(:disabled) {
-    color: #3699ff;
-    border-color: #3699ff;
-}
-
-.page-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.page-ellipsis {
-    padding: 0 8px;
-    color: #7e8299;
-    font-weight: 600;
-}
-
-.pagination-info {
-    font-size: 0.9rem;
-    color: #7e8299;
-    margin-left: 20px;
-    white-space: nowrap;
-}
-
-.spinner {
-   width: 40px; height: 40px;
-   border: 4px solid #e1f0ff;
-   border-top-color: #3699ff;
-   border-radius: 50%;
-   animation: spin 1s linear infinite;
-   margin: 0 auto 15px;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
 </style>

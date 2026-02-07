@@ -50,4 +50,34 @@ class VendorController extends BaseController
             201
         );
     }
+    /**
+     * Get the current authenticated vendor's profile.
+     */
+    public function myBusiness()
+    {
+        $vendor = \App\Models\Vendor::where('user_id', auth()->id())->first();
+        if (!$vendor) {
+            return $this->error('No business registered', [], 404);
+        }
+        return $this->success($this->service->getVendorProfile($vendor->id));
+    }
+    /**
+     * Update the current authenticated vendor's profile.
+     */
+    public function update(Request $request)
+    {
+        $vendor = \App\Models\Vendor::where('user_id', auth()->id())->first();
+        if (!$vendor) {
+            return $this->error('No business registered', [], 404);
+        }
+
+        try {
+            return $this->success(
+                $this->service->updateProfile($vendor->id, $request->all()),
+                'Business profile updated successfully'
+            );
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage());
+        }
+    }
 }

@@ -87,6 +87,19 @@ const updateProfile = async (formData, scope = 'admin') => {
     }
 };
 
+const fetchProfile = async () => {
+    try {
+        const data = await AuthService.fetchUser();
+        if (data.success) {
+            setUser(data.data, 'user');
+            return true;
+        }
+    } catch (err) {
+        console.error('Failed to fetch user profile:', err);
+        return false;
+    }
+};
+
 export const useAuthStore = () => {
     return {
         state: readonly(state),
@@ -94,6 +107,7 @@ export const useAuthStore = () => {
         setToken,
         login,
         logout,
-        updateProfile
+        updateProfile,
+        fetchProfile
     };
 };

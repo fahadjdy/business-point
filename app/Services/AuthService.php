@@ -38,7 +38,7 @@ class AuthService extends BaseService
         $token = $user->createToken($tokenName)->plainTextToken;
 
         return [
-            'user' => $user,
+            'user' => $user->load('vendor'),
             'access_token' => $token,
             'token_type' => 'Bearer',
         ];

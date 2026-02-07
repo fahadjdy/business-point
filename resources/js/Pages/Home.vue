@@ -1,336 +1,532 @@
 <template>
   <div class="home-page">
-    <!-- Hero Section -->
-    <section class="hero-section">
-      <div class="hero-container shadow-sm">
-        <h1 class="hero-title">Connecting our Village. <br> Finding your needs.</h1>
-        <p class="hero-subtitle">Find shops, doctors, and essential services in your community instantly.</p>
-        
-        <div class="search-container">
-          <div class="search-wrapper">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input type="text" placeholder="Search for doctors, shops, or services..." class="search-input" v-model="searchQuery" @keyup.enter="handleSearch">
-            <button class="search-btn" @click="handleSearch">Search</button>
+    <!-- Main Grid Container -->
+    <div class="home-container">
+      <!-- Main Content Column -->
+      <div class="main-content">
+        <!-- Featured Banner -->
+        <section class="featured-banner">
+          <div v-if="loadingBanners" class="banner-loading">
+            <i class="fa-solid fa-spinner fa-spin"></i>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <div class="content-container">
-      <!-- Emergency Contacts -->
-      <section class="section">
-        <h2 class="section-title"><span class="icon-star">✳</span> Emergency Contacts</h2>
-        <div class="emergency-grid" v-if="!loadingContacts">
-          <div v-for="contact in emergencyContacts" :key="contact.id" class="contact-card" :class="contact.color">
-            <div class="card-badge" v-if="contact.badge">{{ contact.badge }}</div>
-            <div class="card-icon">
-              <i :class="contact.icon || 'fa-solid fa-phone'"></i>
+          <div v-else-if="banners.length > 0" class="banner-carousel">
+            <div class="banner-slide" :style="{ backgroundImage: `url(${currentBanner.image})` }">
+              <div class="banner-overlay"></div>
+              <div class="banner-content">
+                <span class="banner-badge">UPCOMING EVENT</span>
+                <h1 class="banner-title">{{ currentBanner.title }}</h1>
+                <p class="banner-description">{{ currentBanner.description }}</p>
+                <button v-if="currentBanner.link" class="banner-btn" @click="window.location.href = currentBanner.link">
+                  {{ currentBanner.button_text || 'Learn More' }}
+                </button>
+              </div>
+              <!-- Carousel Indicators -->
+              <div class="carousel-indicators" v-if="banners.length > 1">
+                <span 
+                  v-for="(banner, index) in banners" 
+                  :key="banner.id"
+                  class="indicator"
+                  :class="{ active: currentBannerIndex === index }"
+                  @click="currentBannerIndex = index"
+                ></span>
+              </div>
             </div>
-            <h3 class="contact-name">{{ contact.name }}</h3>
-            <p class="contact-number">{{ contact.contact_number }}</p>
-            <button class="call-btn" @click="handleCall(contact)">
-              {{ contact.color === 'primary' ? 'Contact Office' : 'Call Now' }}
+          </div>
+          <div v-else class="banner-placeholder">
+            <i class="fa-solid fa-image"></i>
+            <p>No banners available</p>
+          </div>
+        </section>
+
+        <!-- Quick Emergency Access -->
+        <section class="emergency-access">
+          <h2 class="section-title">
+            <i class="fa-solid fa-asterisk"></i> Quick Emergency Access
+          </h2>
+          <div class="emergency-buttons">
+            <button class="emergency-btn ambulance" @click="handleEmergencyCall('ambulance')">
+              <i class="fa-solid fa-truck-medical"></i>
+              <span>Ambulance</span>
+            </button>
+            <button class="emergency-btn police" @click="handleEmergencyCall('police')">
+              <i class="fa-solid fa-shield-halved"></i>
+              <span>Police</span>
+            </button>
+            <button class="emergency-btn fire" @click="handleEmergencyCall('fire')">
+              <i class="fa-solid fa-fire-extinguisher"></i>
+              <span>Fire</span>
             </button>
           </div>
-        </div>
-        <div v-else class="loading-state">
-           <i class="fa-solid fa-spinner fa-spin"></i> Loading contacts...
-        </div>
-      </section>
+        </section>
 
-      <section class="section">
-        <div class="section-header">
-          <h2 class="section-title"><i class="fa-solid fa-bullhorn icon-blue"></i> Village Announcements</h2>
-          <router-link to="/announcements" class="view-all">View All</router-link>
-        </div>
-        <div class="announcements-container" v-if="!loadingAnnouncements">
-          <div v-for="(announcement, index) in announcements" :key="announcement.id" 
-               class="announcement-card shadow-sm" 
-               :class="{ 'is-expanded': expandedId === announcement.id }">
-            
-            <div class="announcement-header" @click="toggleAnnouncement(announcement.id)">
-               <div class="announcement-meta">
-                  <Badge v-if="isNew(announcement)" type="primary" size="sm" class="new-badge">NEW</Badge>
-                  <div v-else class="time-ago">{{ formatTimeAgo(announcement.created_at) }}</div>
-               </div>
-               
-               <div class="announcement-title-row">
-                  <div class="announcement-img-mini" v-if="announcement.image && expandedId !== announcement.id">
-                     <img :src="announcement.image" />
-                  </div>
-                  <p class="announcement-title">{{ announcement.title }}</p>
-                  <i class="fa-solid fa-chevron-down toggle-icon"></i>
-               </div>
+        <!-- Search Bar -->
+        <section class="search-section">
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input 
+              type="text" 
+              v-model="searchQuery"
+              placeholder="Search 500+ local businesses, doctors, or services..."
+              @keyup.enter="handleSearch"
+            />
+          </div>
+        </section>
+
+        <!-- Explore Categories -->
+        <section class="categories-section">
+          <div class="section-header">
+            <h2 class="section-title">Explore Categories</h2>
+            <router-link to="/community-directory" class="view-all-link">View All Directory</router-link>
+          </div>
+          <div class="category-grid">
+            <div class="category-card" v-for="cat in categories" :key="cat.name" @click="navigateToCategory(cat)">
+              <div class="category-icon">
+                <i :class="cat.icon"></i>
+              </div>
+              <div class="category-info">
+                <h3>{{ cat.name }}</h3>
+                <p>{{ cat.count }}</p>
+              </div>
             </div>
-
-            <Transition name="expand">
-               <div v-if="expandedId === announcement.id" class="announcement-body">
-                  <p class="announcement-description">{{ announcement.message }}</p>
-                  
-                  <div v-if="announcement.images && announcement.images.length > 0" class="announcement-gallery">
-                    <lightgallery
-                        :settings="{ speed: 500, plugins: plugins }"
-                        class="gallery-grid"
-                    >
-                        <a v-for="(img, idx) in announcement.images" 
-                           :key="idx" 
-                           :href="img" 
-                           class="gallery-item"
-                           :class="{ 'is-hidden': idx > 0 && announcement.images.length > 1 }"
-                        >
-                            <img alt="Announcement Image" :src="img" />
-                            <div class="zoom-overlay">
-                                <i class="fa-solid fa-magnifying-glass-plus"></i>
-                                <span v-if="idx === 0 && announcement.images.length > 1" class="more-count">
-                                    +{{ announcement.images.length - 1 }} More
-                                </span>
-                            </div>
-                        </a>
-                    </lightgallery>
-                  </div>
-               </div>
-            </Transition>
           </div>
-          <div v-if="hasMoreAnnouncements" class="view-all-wrapper mt-4">
-             <router-link :to="{ name: 'announcements.index' }" class="btn-view-all">
-               View All Announcements <i class="fa-solid fa-arrow-right ml-2"></i>
-             </router-link>
-          </div>
-          <div v-if="announcements.length === 0" class="no-data">No active announcements</div>
-        </div>
-        <div v-else class="loading-state">
-           <i class="fa-solid fa-spinner fa-spin"></i> Loading announcements...
-        </div>
-      </section>
+        </section>
 
-      <!-- Browse by Category -->
-      <section class="section mb-10">
-        <h2 class="section-title">Browse by Category</h2>
-        <div class="category-grid">
-          <div class="category-card shadow-sm" v-for="cat in categories" :key="cat.name">
-            <div class="cat-icon-wrapper" :class="cat.color">
-              <i :class="cat.icon"></i>
+        <!-- Featured Members -->
+        <section class="featured-members">
+          <h2 class="section-title">Featured Members</h2>
+          <div class="members-grid">
+            <div class="member-card" v-for="member in featuredMembers" :key="member.id">
+              <div class="member-image">
+                <img :src="member.image" :alt="member.name" />
+              </div>
+              <div class="member-info">
+                <h3>{{ member.name }} <i v-if="member.verified" class="fa-solid fa-circle-check verified"></i></h3>
+                <p class="member-status">{{ member.status }}</p>
+              </div>
+              <button class="member-action" @click="contactMember(member)">
+                <i :class="member.actionIcon"></i>
+              </button>
             </div>
-            <h3 class="cat-name">{{ cat.name }}</h3>
-            <p class="cat-subtitle">{{ cat.subtitle }}</p>
+          </div>
+        </section>
+      </div>
+
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <!-- Village Announcements -->
+        <div class="widget announcements-widget">
+          <h3 class="widget-title">
+            <i class="fa-solid fa-bullhorn"></i> Village Announcements
+          </h3>
+          <div class="announcement-list">
+            <div 
+              v-for="announcement in announcements.slice(0, 3)" 
+              :key="announcement.id"
+              class="announcement-item"
+              :class="announcement.priority"
+            >
+              <span class="announcement-badge">{{ announcement.priority.toUpperCase() }}</span>
+              <span class="announcement-time">{{ formatTimeAgo(announcement.created_at) }}</span>
+              <h4>{{ announcement.title }}</h4>
+              <p>{{ announcement.message.substring(0, 80) }}...</p>
+            </div>
+          </div>
+          <router-link to="/announcements" class="view-all-btn">View All Notifications</router-link>
+        </div>
+
+        <!-- Weather Widget -->
+        <div class="widget weather-widget">
+          <div class="weather-main">
+            <div class="weather-temp">
+              <span class="temp">24°C</span>
+              <i class="fa-solid fa-cloud-sun weather-icon"></i>
+            </div>
+            <p class="weather-condition">Partly Cloudy</p>
+          </div>
+          <div class="weather-footer">
+            <span>Lakeside Village, 4210</span>
+            <span>14:45 PM</span>
           </div>
         </div>
-      </section>
+
+        <!-- Essential Contacts -->
+        <div class="widget contacts-widget">
+          <h3 class="widget-title">Essential Contacts</h3>
+          <div class="contact-list">
+            <a href="#" class="contact-item">
+              <i class="fa-solid fa-building"></i>
+              <span>Village Council Office</span>
+            </a>
+            <a href="#" class="contact-item">
+              <i class="fa-solid fa-bolt"></i>
+              <span>Utility Support (Electric)</span>
+            </a>
+            <a href="#" class="contact-item">
+              <i class="fa-solid fa-trash"></i>
+              <span>Waste Management Dept</span>
+            </a>
+          </div>
+        </div>
+      </aside>
     </div>
-
-    <!-- Simple Footer -->
-    <footer class="main-footer">
-       <div class="content-container">
-          <div class="footer-grid">
-             <div class="footer-brand">
-                <div class="footer-logo">
-                   <img v-if="settings.site_logo" :src="settings.site_logo" style="height: 30px;" />
-                   <span v-else class="brand-text">BP</span>
-                   <span class="brand-name ml-2">{{ settings.brand_name || 'Business Point' }}</span>
-                </div>
-                <p class="footer-desc">The official business directory of our village community. Connecting local providers with residents.</p>
-             </div>
-             <div class="footer-links">
-                <h4>Quick Links</h4>
-                <ul>
-                   <li><a href="#">Add your Shop</a></li>
-                   <li><a href="#">Latest News</a></li>
-                   <li><a href="#">Privacy Policy</a></li>
-                   <li><a href="#">Community Guidelines</a></li>
-                </ul>
-             </div>
-             <div class="footer-contact">
-                <h4>Contact Info</h4>
-                <p v-if="settings.app_email"><i class="fa-solid fa-envelope mr-2"></i> {{ settings.app_email }}</p>
-                <p v-if="settings.app_phone"><i class="fa-solid fa-phone mr-2"></i> {{ settings.app_phone }}</p>
-             </div>
-          </div>
-       </div>
-    </footer>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { storeToRefs } from 'pinia';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
-import { useConfigStore } from '../store/config';
-import Badge from '@/Components/Badge.vue';
 import moment from 'moment';
 
-// LightGallery
-import Lightgallery from 'lightgallery/vue';
-import lgZoom from 'lightgallery/plugins/zoom';
-import 'lightgallery/css/lightgallery.css';
-import 'lightgallery/css/lg-zoom.css';
-
-const configStore = useConfigStore();
-const { settings } = storeToRefs(configStore);
+const router = useRouter();
 
 const searchQuery = ref('');
-const emergencyContacts = ref([]);
+const banners = ref([]);
+const loadingBanners = ref(true);
+const currentBannerIndex = ref(0);
 const announcements = ref([]);
-const hasMoreAnnouncements = ref(false);
-const loadingContacts = ref(true);
-const loadingAnnouncements = ref(true);
-const expandedId = ref(null);
+const emergencyContacts = ref([]);
 
-const plugins = [lgZoom];
-
-const onInit = () => {
-    console.log('lightGallery has been initialized');
-};
-
-const toggleAnnouncement = (id) => {
-    expandedId.value = expandedId.value === id ? null : id;
-};
+const currentBanner = computed(() => banners.value[currentBannerIndex.value] || {});
 
 const categories = [
-  { name: 'Shops', subtitle: 'Grocery, Hardware', icon: 'fa-solid fa-bag-shopping', color: 'blue' },
-  { name: 'Healthcare', subtitle: 'Doctors, Clinics', icon: 'fa-solid fa-notes-medical', color: 'blue' },
-  { name: 'Personal Care', subtitle: 'Barbers, Salons', icon: 'fa-solid fa-scissors', color: 'blue' },
-  { name: 'Home Services', subtitle: 'Electricians, Plumbers', icon: 'fa-solid fa-screwdriver-wrench', color: 'blue' },
+  { name: 'Shops', count: '124 Listings', icon: 'fa-solid fa-bag-shopping' },
+  { name: 'Doctors', count: '42 Clinics', icon: 'fa-solid fa-user-doctor' },
+  { name: 'Barbers', count: '18 Salons', icon: 'fa-solid fa-scissors' },
+  { name: 'Services', count: '85 Experts', icon: 'fa-solid fa-screwdriver-wrench' },
 ];
 
-const fetchEmergencyContacts = async () => {
+const featuredMembers = [
+  {
+    id: 1,
+    name: 'Central Pharmacy',
+    image: '/images/pharmacy-placeholder.jpg',
+    status: 'Open 24/7 • 0.5km away',
+    verified: true,
+    actionIcon: 'fa-solid fa-phone'
+  },
+  {
+    id: 2,
+    name: 'Elite Grooming',
+    image: '/images/barber-placeholder.jpg',
+    status: 'Closes 8 PM • 1.2km away',
+    verified: true,
+    actionIcon: 'fa-solid fa-calendar'
+  }
+];
+
+const fetchBanners = async () => {
+  loadingBanners.value = true;
   try {
-    const response = await axios.get('/api/v1/emergency-contacts', { params: { is_active: 1, sort_by: 'sort_order', sort_order: 'asc' } });
+    const response = await axios.get('/api/v1/banners', {
+      params: { is_active: 1 }
+    });
     if (response.data.success) {
-      emergencyContacts.value = response.data.data.data;
+      banners.value = response.data.data.data || response.data.data;
     }
   } catch (error) {
-    console.error('Error fetching emergency contacts:', error);
+    console.error('Error fetching banners:', error);
   } finally {
-    loadingContacts.value = false;
+    loadingBanners.value = false;
   }
 };
 
 const fetchAnnouncements = async () => {
   try {
-    const response = await axios.get('/api/v1/notifications', { params: { is_active: 1, sort_by: 'created_at', sort_order: 'desc' } });
+    const response = await axios.get('/api/v1/notifications', {
+      params: { is_active: 1, per_page: 3 }
+    });
     if (response.data.success) {
-      const allData = response.data.data.data;
-      announcements.value = allData.slice(0, 10);
-      hasMoreAnnouncements.value = allData.length > 10;
+      announcements.value = response.data.data.data || [];
     }
   } catch (error) {
     console.error('Error fetching announcements:', error);
-  } finally {
-    loadingAnnouncements.value = false;
   }
 };
 
 const handleSearch = () => {
-  if (searchQuery.value) {
-    console.log('Searching for:', searchQuery.value);
+  if (searchQuery.value.trim()) {
+    router.push({ 
+      name: 'community-directory.index', 
+      query: { search: searchQuery.value } 
+    });
   }
 };
 
-const handleCall = (contact) => {
-  if (contact.contact_number && contact.contact_number.match(/^\d+$/)) {
-    window.location.href = `tel:${contact.contact_number}`;
-  } else {
-    alert(`Contacting ${contact.name}: ${contact.contact_number}`);
-  }
+const handleEmergencyCall = (type) => {
+  const numbers = {
+    ambulance: '108',
+    police: '100',
+    fire: '101'
+  };
+  window.location.href = `tel:${numbers[type]}`;
 };
 
-const isNew = (notification) => {
-  return moment(notification.created_at).isSame(moment(), 'day');
+const navigateToCategory = (category) => {
+  router.push({ name: 'community-directory.index' });
+};
+
+const contactMember = (member) => {
+  console.log('Contact member:', member);
 };
 
 const formatTimeAgo = (date) => {
-  return moment(date).fromNow().toUpperCase();
+  return moment(date).fromNow();
 };
 
+// Auto-rotate banners
+let bannerInterval;
 onMounted(() => {
-  configStore.fetchSettings();
-  fetchEmergencyContacts();
+  fetchBanners();
   fetchAnnouncements();
+  
+  bannerInterval = setInterval(() => {
+    if (banners.value.length > 1) {
+      currentBannerIndex.value = (currentBannerIndex.value + 1) % banners.value.length;
+    }
+  }, 5000);
+});
+
+onBeforeUnmount(() => {
+  if (bannerInterval) clearInterval(bannerInterval);
 });
 </script>
 
 <style scoped>
 .home-page {
-  background: #f8fafd;
+  background: #f5f8fa;
   min-height: 100vh;
+  padding: 20px 0;
 }
 
-.content-container {
-  max-width: 1100px;
+.home-container {
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 0 20px;
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 30px;
 }
 
-/* Hero Section */
-.hero-section {
-  background: #fff;
-  padding: 40px 20px;
+/* Featured Banner */
+.featured-banner {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin-bottom: 30px;
 }
 
-.hero-container {
-  max-width: 1000px;
-  margin: 0 auto;
-  background: linear-gradient(135deg, #eef5ff 0%, #f6faff 100%);
+.banner-carousel {
+  position: relative;
+  height: 400px;
+}
+
+.banner-slide {
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.banner-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%);
+}
+
+.banner-content {
+  position: relative;
+  z-index: 2;
+  padding: 60px;
+  color: white;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.banner-badge {
+  display: inline-block;
+  background: #3699ff;
+  color: white;
+  padding: 6px 16px;
   border-radius: 20px;
-  padding: 60px 40px;
-  text-align: center;
-}
-
-.hero-title {
-  font-size: 2.75rem;
-  font-weight: 800;
-  color: #1a1a1a;
-  line-height: 1.2;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   margin-bottom: 20px;
+  width: fit-content;
 }
 
-.hero-subtitle {
+.banner-title {
+  font-size: 3rem;
+  font-weight: 800;
+  margin-bottom: 15px;
+  line-height: 1.2;
+}
+
+.banner-description {
   font-size: 1.1rem;
-  color: #666;
-  max-width: 500px;
-  margin: 0 auto 40px;
-}
-
-.search-container {
+  margin-bottom: 30px;
   max-width: 600px;
-  margin: 0 auto;
+  line-height: 1.6;
 }
 
-.search-wrapper {
-  background: #fff;
+.banner-btn {
+  background: white;
+  color: #1a1a1a;
+  border: none;
+  padding: 14px 32px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  width: fit-content;
+  transition: all 0.3s;
+}
+
+.banner-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+.carousel-indicators {
+  position: absolute;
+  bottom: 20px;
+  left: 60px;
+  display: flex;
+  gap: 8px;
+  z-index: 3;
+}
+
+.indicator {
+  width: 30px;
+  height: 4px;
+  background: rgba(255,255,255,0.4);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.indicator.active {
+  background: white;
+  width: 40px;
+}
+
+.banner-loading, .banner-placeholder {
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #b5b5c3;
+  font-size: 1.2rem;
+}
+
+/* Emergency Access */
+.emergency-access {
+  margin-bottom: 30px;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-title i {
+  color: #f64e60;
+  font-size: 0.9rem;
+}
+
+.emergency-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.emergency-btn {
+  background: white;
+  border: none;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.emergency-btn i {
+  font-size: 2rem;
+  color: white;
+  width: 60px;
+  height: 60px;
   border-radius: 12px;
   display: flex;
   align-items: center;
-  padding: 6px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  justify-content: center;
 }
 
-.search-icon {
-  padding: 0 15px;
+.emergency-btn span {
+  font-weight: 700;
+  color: #1a1a1a;
+  font-size: 1rem;
+}
+
+.emergency-btn.ambulance i { background: #f64e60; }
+.emergency-btn.police i { background: #3699ff; }
+.emergency-btn.fire i { background: #ffa800; }
+
+.emergency-btn:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+/* Search Section */
+.search-section {
+  margin-bottom: 30px;
+}
+
+.search-box {
+  background: white;
+  border-radius: 12px;
+  padding: 8px 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.search-box i {
+  color: #b5b5c3;
+  font-size: 1.1rem;
+}
+
+.search-box input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  padding: 12px 0;
+  color: #1a1a1a;
+}
+
+.search-box input::placeholder {
   color: #b5b5c3;
 }
 
-.search-input {
-  flex: 1;
-  border: none;
-  padding: 12px 5px;
-  font-size: 1rem;
-  outline: none;
-}
-
-.search-btn {
-  background: #3699ff;
-  color: white;
-  border: none;
-  padding: 12px 25px;
-  border-radius: 8px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-/* Sections */
-.section {
-  margin-bottom: 50px;
+/* Categories */
+.categories-section {
+  margin-bottom: 30px;
 }
 
 .section-header {
@@ -340,347 +536,352 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.section-title {
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: #1a1a1a;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
+.view-all-link {
+  color: #3699ff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
 }
 
-.icon-star { color: #f64e60; font-size: 1.5rem; }
-.icon-blue { color: #3699ff; }
-
-/* Emergency Grid */
-.emergency-grid {
+.category-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  gap: 15px;
 }
 
-@media (max-width: 1024px) {
-  .emergency-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.category-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
-@media (max-width: 640px) {
-  .emergency-grid {
-    grid-template-columns: 1fr;
-  }
+.category-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
 }
 
-.contact-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 24px;
-  position: relative;
-  border-left: 5px solid transparent;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.04);
-  transition: all 0.3s ease;
-}
-
-.contact-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-}
-
-.contact-card.danger { border-left-color: #f64e60; }
-.contact-card.primary { border-left-color: #3699ff; }
-.contact-card.success { border-left-color: #1bc5bd; }
-.contact-card.warning { border-left-color: #ffa800; }
-.contact-card.info { border-left-color: #8950fc; }
-
-.card-badge {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  font-size: 0.7rem;
-  font-weight: 800;
-  color: #b5b5c3;
-}
-
-.card-icon {
+.category-icon {
   width: 50px;
   height: 50px;
-  background: #fff5f8;
-  color: #f64e60;
-  border-radius: 12px;
+  background: #e1f0ff;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+}
+
+.category-icon i {
   font-size: 1.5rem;
-  margin-bottom: 15px;
+  color: #3699ff;
 }
 
-.primary .card-icon { background: #e1f0ff; color: #3699ff; }
-.success .card-icon { background: #c9f7f5; color: #1bc5bd; }
-.warning .card-icon { background: #fff4de; color: #ffa800; }
-.info .card-icon { background: #eee5ff; color: #8950fc; }
-
-.contact-name { font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; }
-.contact-number { font-size: 1.8rem; font-weight: 800; color: #f64e60; margin-bottom: 20px; }
-.primary .contact-number { color: #1a1a1a; font-size: 1.2rem; min-height: 2.7rem; display: flex; align-items: center; }
-.success .contact-number { color: #1bc5bd; }
-.warning .contact-number { color: #ffa800; }
-.info .contact-number { color: #8950fc; }
-
-.call-btn {
-  width: 100%;
-  padding: 12px;
-  border-radius: 8px;
-  border: none;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.danger .call-btn { background: #f64e60; color: #fff; }
-.primary .call-btn { background: #3699ff; color: #fff; }
-.success .call-btn { background: #1bc5bd; color: #fff; }
-.warning .call-btn { background: #ffa800; color: #fff; }
-.info .call-btn { background: #8950fc; color: #fff; }
-
-.danger .call-btn:hover { background: #e04455; }
-.primary .call-btn:hover { background: #1a7ae4; }
-
-/* Announcements */
-.announcements-container {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.announcement-card {
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  border: 1px solid #eff2f5;
-}
-
-.announcement-card.is-expanded {
-  border-color: #3699ff;
-  box-shadow: 0 10px 30px rgba(54, 153, 255, 0.08);
-}
-
-.announcement-header {
-  padding: 15px 20px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.announcement-meta {
-  width: 80px;
-  flex-shrink: 0;
-}
-
-.announcement-title-row {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.announcement-title {
+.category-info h3 {
   font-size: 1rem;
-  color: #1a1a1a;
   font-weight: 700;
-  margin: 0;
-  flex: 1;
+  color: #1a1a1a;
+  margin: 0 0 4px 0;
 }
 
-.toggle-icon {
+.category-info p {
+  font-size: 0.85rem;
   color: #b5b5c3;
-  transition: transform 0.3s;
-  font-size: 0.8rem;
+  margin: 0;
 }
 
-.is-expanded .toggle-icon { transform: rotate(180deg); color: #3699ff; }
-
-.announcement-body {
-  padding: 0 20px 20px 120px;
-  color: #464e5f;
+/* Featured Members */
+.featured-members {
+  margin-bottom: 30px;
 }
 
-.announcement-description {
-  font-size: 0.95rem;
-  line-height: 1.6;
-  margin-bottom: 20px;
-  white-space: pre-line;
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
 }
 
-.announcement-img-mini {
-  width: 35px;
-  height: 35px;
-  border-radius: 6px;
+.member-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.member-image {
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
   overflow: hidden;
-  flex-shrink: 0;
   background: #f3f6f9;
+  flex-shrink: 0;
 }
 
-.announcement-img-mini img {
+.member-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-/* Gallery */
-.view-all-wrapper {
-  text-align: center;
+.member-info {
+  flex: 1;
 }
 
-.btn-view-all {
-  display: inline-flex;
-  align-items: center;
-  padding: 12px 24px;
-  background: #fff;
-  border: 1px solid #3699ff;
-  color: #3699ff;
-  border-radius: 8px;
+.member-info h3 {
+  font-size: 1rem;
   font-weight: 700;
-  text-decoration: none;
-  transition: all 0.3s ease;
+  color: #1a1a1a;
+  margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.btn-view-all:hover {
+.verified {
+  color: #3699ff;
+  font-size: 0.9rem;
+}
+
+.member-status {
+  font-size: 0.85rem;
+  color: #b5b5c3;
+  margin: 0;
+}
+
+.member-action {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: #e1f0ff;
+  border: none;
+  color: #3699ff;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.member-action:hover {
   background: #3699ff;
-  color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(54, 153, 255, 0.2);
+  color: white;
 }
 
-.announcement-gallery {
-    margin-top: 15px;
-    border-radius: 12px;
-    overflow: hidden;
-    max-width: 500px;
-}
-
-.gallery-item {
-    display: block;
-    position: relative;
-    cursor: pointer;
-}
-
-.gallery-item img {
-    width: 100%;
-    max-height: 300px;
-    object-fit: cover;
-    display: block;
-}
-
-.zoom-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(0,0,0,0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.5rem;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-.gallery-item.is-hidden { display: none; }
-.more-count {
-    margin-left: 8px;
-    font-size: 0.9rem;
-    font-weight: 700;
-}
-
-/* Transitions */
-.expand-enter-active, .expand-leave-active {
-  transition: all 0.3s ease-out;
-  max-height: 1000px;
-  overflow: hidden;
-}
-.expand-enter-from, .expand-leave-to {
-  max-height: 0;
-  opacity: 0;
-  padding-bottom: 0;
-}
-
-.view-all { color: #3699ff; text-decoration: none; font-weight: 600; font-size: 0.9rem; }
-
-/* Category Grid */
-.category-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+/* Sidebar */
+.sidebar {
+  display: flex;
+  flex-direction: column;
   gap: 20px;
 }
 
-.category-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 30px 20px;
-  text-align: center;
-  transition: transform 0.2s;
-  cursor: pointer;
+.widget {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
-.category-card:hover { transform: translateY(-5px); }
+.widget-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
-.cat-icon-wrapper {
-  width: 60px;
-  height: 60px;
-  background: #e1f0ff;
+.widget-title i {
   color: #3699ff;
-  border-radius: 50%;
+}
+
+/* Announcements Widget */
+.announcement-list {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  margin: 0 auto 20px;
-}
-
-.cat-name { font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; }
-.cat-subtitle { font-size: 0.85rem; color: #b5b5c3; font-weight: 500; }
-
-/* Footer */
-.main-footer {
-  background: #fff;
-  padding: 60px 0;
-  border-top: 1px solid #eff2f5;
-}
-
-.footer-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 40px;
-}
-
-.footer-brand .footer-logo {
-  display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 15px;
   margin-bottom: 20px;
 }
 
-.footer-brand .brand-name { font-size: 1.5rem; font-weight: 800; color: #1e1e2d; }
-.footer-desc { color: #b5b5c3; line-height: 1.6; max-width: 300px; }
-
-.footer-links h4, .footer-contact h4 { font-weight: 700; margin-bottom: 20px; color: #1e1e2d; }
-.footer-links ul { list-style: none; padding: 0; }
-.footer-links li { margin-bottom: 12px; }
-.footer-links a { color: #b5b5c3; text-decoration: none; transition: color 0.2s; }
-.footer-links a:hover { color: #3699ff; }
-
-.footer-contact p { color: #b5b5c3; margin-bottom: 12px; }
-
-@media (max-width: 768px) {
-  .hero-title { font-size: 1.8rem; }
-  .footer-grid { grid-template-columns: 1fr; }
-  .announcement-item { flex-direction: column; align-items: flex-start; gap: 10px; }
-  .announcement-left { width: auto; }
+.announcement-item {
+  padding: 15px;
+  background: #f9f9fc;
+  border-radius: 8px;
+  border-left: 4px solid #3699ff;
 }
 
-.shadow-sm { box-shadow: 0 5px 20px rgba(0,0,0,0.03); }
-.mb-10 { margin-bottom: 80px; }
-.loading-state { padding: 40px; text-align: center; color: #b5b5c3; }
-.no-data { padding: 20px; text-align: center; color: #b5b5c3; font-style: italic; }
+.announcement-item.important {
+  border-left-color: #f64e60;
+  background: #fff5f8;
+}
+
+.announcement-badge {
+  display: inline-block;
+  background: #3699ff;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-right: 8px;
+}
+
+.announcement-item.important .announcement-badge {
+  background: #f64e60;
+}
+
+.announcement-time {
+  font-size: 0.75rem;
+  color: #b5b5c3;
+  text-transform: uppercase;
+}
+
+.announcement-item h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 8px 0 4px 0;
+}
+
+.announcement-item p {
+  font-size: 0.85rem;
+  color: #5e6278;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.view-all-btn {
+  display: block;
+  text-align: center;
+  color: #3699ff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 10px;
+  border-radius: 6px;
+  transition: all 0.3s;
+}
+
+.view-all-btn:hover {
+  background: #f0f8ff;
+}
+
+/* Weather Widget */
+.weather-widget {
+  background: linear-gradient(135deg, #3699ff 0%, #1a7ae4 100%);
+  color: white;
+}
+
+.weather-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.weather-temp {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.temp {
+  font-size: 3rem;
+  font-weight: 800;
+}
+
+.weather-icon {
+  font-size: 3rem;
+  opacity: 0.9;
+}
+
+.weather-condition {
+  font-size: 1.1rem;
+  margin: 0;
+  opacity: 0.95;
+}
+
+.weather-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  opacity: 0.9;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255,255,255,0.2);
+}
+
+/* Contacts Widget */
+.contact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f9f9fc;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #1a1a1a;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.contact-item:hover {
+  background: #e1f0ff;
+  color: #3699ff;
+}
+
+.contact-item i {
+  color: #3699ff;
+  width: 20px;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .home-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .sidebar {
+    grid-row: 2;
+  }
+  
+  .category-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .banner-title {
+    font-size: 2rem;
+  }
+  
+  .banner-content {
+    padding: 30px;
+  }
+  
+  .emergency-buttons {
+    grid-template-columns: 1fr;
+  }
+  
+  .category-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .members-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

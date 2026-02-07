@@ -22,7 +22,6 @@ class ContactBook extends Model
         'description',
         'type',
         'is_active',
-        'sort_order',
         'deleted_by',
         'delete_reason'
     ];
@@ -31,7 +30,6 @@ class ContactBook extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
-        'sort_order' => 'integer',
     ];
 
     /**
@@ -56,6 +54,14 @@ class ContactBook extends Model
     public function tags()
     {
         return $this->belongsToMany(Tag::class, 'contact_book_tag');
+    }
+
+    /**
+     * Get contact numbers for this contact
+     */
+    public function contactNumbers()
+    {
+        return $this->hasMany(ContactNumber::class);
     }
 
     /**
@@ -166,7 +172,7 @@ class ContactBook extends Model
      */
     public function scopeOrdered(Builder $query)
     {
-        return $query->orderBy('sort_order', 'asc')->orderBy('name', 'asc');
+        return $query->orderBy('name', 'asc');
     }
 
     /**

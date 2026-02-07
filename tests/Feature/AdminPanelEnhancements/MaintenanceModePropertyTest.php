@@ -47,7 +47,7 @@ class MaintenanceModePropertyTest extends TestCase
 
             // Test API endpoint consistency with API key
             $response = $this->withHeaders([
-                'X-Api-Key' => 'business-point-secret-key'
+                'X-Api-Key' => config('services.auth_api_key')
             ])->getJson('/api/v1/maintenance-status');
             
             $response->assertStatus(200);
@@ -60,7 +60,7 @@ class MaintenanceModePropertyTest extends TestCase
 
             // Test company details endpoint includes maintenance status
             $companyResponse = $this->withHeaders([
-                'X-Api-Key' => 'business-point-secret-key'
+                'X-Api-Key' => config('services.auth_api_key')
             ])->getJson('/api/v1/company-details');
             
             $companyResponse->assertStatus(200);
@@ -115,7 +115,7 @@ class MaintenanceModePropertyTest extends TestCase
 
             // Verify the state is immediately reflected in all endpoints
             $statusResponse = $this->withHeaders([
-                'X-Api-Key' => 'business-point-secret-key'
+                'X-Api-Key' => config('services.auth_api_key')
             ])->getJson('/api/v1/maintenance-status');
             
             $statusData = $statusResponse->json('data');
@@ -147,7 +147,7 @@ class MaintenanceModePropertyTest extends TestCase
 
             // Test API consistency
             $response = $this->withHeaders([
-                'X-Api-Key' => 'business-point-secret-key'
+                'X-Api-Key' => config('services.auth_api_key')
             ])->getJson('/api/v1/maintenance-status');
             
             $response->assertStatus(200);
@@ -158,7 +158,7 @@ class MaintenanceModePropertyTest extends TestCase
 
             // Test company details endpoint
             $companyResponse = $this->withHeaders([
-                'X-Api-Key' => 'business-point-secret-key'
+                'X-Api-Key' => config('services.auth_api_key')
             ])->getJson('/api/v1/company-details');
             
             $companyResponse->assertStatus(200);

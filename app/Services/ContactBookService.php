@@ -32,13 +32,24 @@ class ContactBookService extends BaseService
     /**
      * Create contact with tag associations
      */
+    /**
+     * Create contact with tag associations
+     */
     public function createWithTags(array $data)
     {
         return DB::transaction(function () use ($data) {
             $image = $data['image'] ?? null;
             $tagIds = $data['tag_ids'] ?? [];
+            $contactNumbers = $data['contact_numbers'] ?? [];
             
-            unset($data['image'], $data['tag_ids']);
+            // Auto-fill legacy phone field with the first primary number, or first number
+            if (empty($data['phone']) && !empty($contactNumbers)) {
+                $primary = $contactNumbers[0];
+                $data['phone'] = $primary['number'];
+                $data['type'] = $primary['type'];
+            }
+            
+            unset($data['image'], $data['tag_ids'], $data['contact_numbers']);
 
             $contact = $this->repository->create($data);
 
@@ -47,12 +58,22 @@ class ContactBookService extends BaseService
                 $contact->syncTags($tagIds);
             }
 
-            // Handle image upload
-            if ($image) {
-                $this->mediaService->upload($image, 'App\Models\ContactBook', $contact->id, true);
+            // Save contact numbers
+            if (!empty($contactNumbers)) {
+                foreach ($contactNumbers as $cn) {
+                    $contact->contactNumbers()->create([
+                        'number' => $cn['number'],
+                        'type' => $cn['type']
+                    ]);
+                }
             }
 
-            return $contact->load('tags', 'media');
+            // Handle image upload
+            if ($image) {
+                $this->mediaService->upload($image, $contact, 'default', true, true);
+            }
+
+            return $contact->load('tags', 'media', 'contactNumbers');
         });
     }
 
@@ -64,8 +85,16 @@ class ContactBookService extends BaseService
         return DB::transaction(function () use ($id, $data) {
             $image = $data['image'] ?? null;
             $tagIds = $data['tag_ids'] ?? null;
+            $contactNumbers = $data['contact_numbers'] ?? null;
             
-            unset($data['image'], $data['tag_ids']);
+            // Auto-fill legacy phone field
+            if (isset($contactNumbers) && !empty($contactNumbers)) {
+                 $primary = $contactNumbers[0];
+                 $data['phone'] = $primary['number'];
+                 $data['type'] = $primary['type'];
+            }
+            
+            unset($data['image'], $data['tag_ids'], $data['contact_numbers']);
 
             $contact = $this->repository->update($id, $data);
 
@@ -74,12 +103,23 @@ class ContactBookService extends BaseService
                 $contact->syncTags($tagIds);
             }
 
-            // Handle image upload
-            if ($image) {
-                $this->mediaService->upload($image, 'App\Models\ContactBook', $contact->id, true);
+            // Update contact numbers (Delete all and recreate for simplicity)
+            if ($contactNumbers !== null) {
+                $contact->contactNumbers()->delete();
+                foreach ($contactNumbers as $cn) {
+                    $contact->contactNumbers()->create([
+                        'number' => $cn['number'],
+                        'type' => $cn['type']
+                    ]);
+                }
             }
 
-            return $contact->load('tags', 'media');
+            // Handle image upload
+            if ($image) {
+                $this->mediaService->upload($image, $contact, 'default', true, true);
+            }
+
+            return $contact->load('tags', 'media', 'contactNumbers');
         });
     }
 
@@ -96,7 +136,7 @@ class ContactBookService extends BaseService
      */
     public function getContactWithRelations(int $id)
     {
-        $contact = $this->repository->findWithRelations($id, ['tags', 'media']);
+        $contact = $this->repository->findWithRelations($id, ['tags', 'media', 'contactNumbers']);
         if ($contact) {
             $this->logAction('view', $contact->id, null);
         }

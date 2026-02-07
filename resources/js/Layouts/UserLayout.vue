@@ -23,10 +23,28 @@
         </nav>
 
         <div class="nav-right">
-          <!-- Register Business (Logged in users only) -->
-          <router-link v-if="state.user" :to="{ name: 'business.register' }" class="btn-register-business mr-4">
-             <i class="fa-solid fa-store mr-2"></i> Register Business
-          </router-link>
+          <!-- Conditional Business Menu -->
+          <template v-if="state.user">
+             <!-- Case 1: No Vendor Profile -> Register -->
+             <router-link v-if="!state.user.vendor" :to="{ name: 'business.register' }" class="btn-register-business mr-4">
+                <i class="fa-solid fa-store mr-2"></i> Register Business
+             </router-link>
+
+             <!-- Case 2: Pending Approval -->
+             <div v-else-if="state.user.vendor.verification_status === 'pending'" class="status-badge warning mr-4">
+                <i class="fa-solid fa-clock mr-2"></i> Application Pending
+             </div>
+
+             <!-- Case 3: Approved -> Manage Business -->
+             <router-link v-else-if="state.user.vendor.verification_status === 'approved'" to="/user/manage-business" class="btn-manage-business mr-4">
+                <i class="fa-solid fa-briefcase mr-2"></i> Manage {{ getVendorLabel(state.user.vendor.vendor_type) }}
+             </router-link>
+             
+             <!-- Case 4: Rejected -->
+             <div v-else-if="state.user.vendor.verification_status === 'rejected'" class="status-badge danger mr-4">
+                <i class="fa-solid fa-circle-exclamation mr-2"></i> Application Rejected
+             </div>
+          </template>
 
           <!-- Authenticated View -->
           <div v-if="state.user" class="user-profile-wrapper">
@@ -42,6 +60,9 @@
                 <div class="dropdown-header">
                    <p class="user-name">{{ state.user?.name }}</p>
                    <p class="user-email">{{ state.user?.email }}</p>
+                   <span v-if="state.user.vendor" class="vendor-badge mt-1" :class="state.user.vendor.verification_status">
+                       {{ state.user.vendor.vendor_type.toUpperCase() }}
+                   </span>
                 </div>
                 <div class="dropdown-divider"></div>
                 <router-link to="/user/profile" class="dropdown-item" @click="isDropdownOpen = false">
@@ -50,6 +71,12 @@
                 <router-link to="/user/setting" class="dropdown-item" @click="isDropdownOpen = false">
                    <i class="fa-solid fa-sliders"></i> Settings
                 </router-link>
+                
+                <!-- Manage Link in Dropdown too -->
+                <router-link v-if="state.user.vendor?.verification_status === 'approved'" to="/user/manage-business" class="dropdown-item" @click="isDropdownOpen = false">
+                   <i class="fa-solid fa-store"></i> Manage My {{ getVendorLabel(state.user.vendor.vendor_type) }}
+                </router-link>
+
                 <div class="dropdown-divider"></div>
                 <button @click="handleLogout" class="dropdown-item text-danger">
                    <i class="fa-solid fa-right-from-bracket"></i> Logout
@@ -93,7 +120,7 @@ import { useConfigStore } from '../store/config';
 import swal from '../utils/swal';
 
 const router = useRouter();
-const { state, logout } = useAuthStore();
+const { state, logout, fetchProfile } = useAuthStore();
 const configStore = useConfigStore();
 const { settings } = storeToRefs(configStore);
 
@@ -101,6 +128,15 @@ const isDropdownOpen = ref(false);
 
 const toggleDropdown = () => {
   isDropdownOpen.value = !isDropdownOpen.value;
+};
+
+const getVendorLabel = (type) => {
+    const map = {
+        'shop': 'Shop',
+        'doctor': 'Doctor/Clinic',
+        'barber': 'Barber Shop'
+    };
+    return map[type] || 'Business';
 };
 
 const handleLogout = async () => {
@@ -111,6 +147,9 @@ const handleLogout = async () => {
 
 onMounted(() => {
     configStore.fetchSettings();
+    if (state.user_token) {
+        fetchProfile();
+    }
 });
 </script>
 
@@ -237,6 +276,54 @@ onMounted(() => {
   background: #0084ff;
   box-shadow: 0 4px 12px rgba(54, 153, 255, 0.25);
 }
+
+.btn-manage-business {
+  background: #1bc5bd;
+  color: white;
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.btn-manage-business:hover {
+  background: #0bb7af;
+  box-shadow: 0 4px 12px rgba(27, 197, 189, 0.25);
+}
+
+.status-badge {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+}
+
+.status-badge.warning {
+    background: #fff4de;
+    color: #ffa800;
+}
+
+.status-badge.danger {
+    background: #ffe2e5;
+    color: #f64e60;
+}
+
+.vendor-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 800;
+}
+.vendor-badge.approved { background: #c9f7f5; color: #1bc5bd; }
+.vendor-badge.pending { background: #fff4de; color: #ffa800; }
+.vendor-badge.rejected { background: #ffe2e5; color: #f64e60; }
 
 .mr-1 { margin-right: 5px; }
 

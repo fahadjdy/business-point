@@ -18,14 +18,17 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AdminSeeder::class,
             TagSeeder::class,
+            EmergencyContactSeeder::class,            
+            NotificationSeeder::class,
+            SettingSeeder::class,
         ]);
 
-        // User::factory(10)->create();
+        User::factory(10)->create();
 
         User::factory()->create([
             'name' => 'Test User',
-            'email' => 'test@example.com',
-            'phone' => '1234567890',
+            'email' => 'fahadjdy12@gmail.com',
+            'phone' => 'Fahad@123',
         ]);
     }
 }

@@ -1,7 +1,7 @@
 <template>
   <div class="contact-book-admin-page">
     <DataTable 
-      title="Community Directory"
+      :title="'Community Directory (' + (contacts.total || 0) + ')'"
       :columns="columns"
       :data="contacts.data"
       :pagination="contacts"
@@ -45,6 +45,8 @@
             />
           </div>
         </div>
+
+
       </template>
       
       <template #actions>
@@ -99,14 +101,29 @@
       
       <template #cell(tags)="{ item }">
         <div class="flex flex-wrap gap-1">
-          <span 
-            v-for="tag in item.tags" 
+          <span
+            v-for="tag in item.tags.slice(0, 4)"
             :key="tag.id"
             class="inline-block px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800"
           >
             {{ tag.name }}
           </span>
+          <span v-if="item.tags && item.tags.length > 4" class="text-gray-400 text-xs">
+            +{{ item.tags.length - 4 }} more
+          </span>
           <span v-if="!item.tags || item.tags.length === 0" class="text-gray-400 text-xs">No tags</span>
+        </div>
+      </template>
+
+      <template #cell(contact_numbers)="{ item }">
+        <div class="flex flex-col gap-1">
+          <div v-for="num in item.contact_numbers" :key="num.id" class="text-xs whitespace-nowrap">
+            <span class="font-bold uppercase text-gray-500 mr-1">[{{ num.type.substring(0, 1) }}]:</span>
+            {{ num.number }}
+          </div>
+          <div v-if="!item.contact_numbers || item.contact_numbers.length === 0" class="text-gray-400 italic">
+            {{ item.phone || 'No numbers' }}
+          </div>
         </div>
       </template>
       
@@ -122,6 +139,7 @@
 
       <template #cell(actions)="{ item }">
         <div class="text-right">
+          <BaseButton variant="light" size="sm" icon="fa-solid fa-eye" class="mr-2" @click="previewContact(item)" />
           <BaseButton variant="light" size="sm" icon="fa-solid fa-pen-to-square" class="mr-2" @click="openModal(item)" />
           <BaseButton variant="light" size="sm" icon="fa-solid fa-trash" @click="confirmDelete(item.id)" class="text-danger" />
         </div>
@@ -157,22 +175,52 @@
               <BaseInput v-model="form.name" placeholder="John Doe or Business Name" required />
             </div>
             
-            <!-- Type and Phone -->
-            <div class="mb-4">
-              <BaseSelect
-                v-model="form.type"
-                label="Type *"
-                :options="typeOptions"
-                labelField="label"
-                :reduce="(o) => o.value"
-                :searchable="false"
-                placeholder="Select type..."
-              />
-            </div>
 
-            <div class="mb-4">
-              <label class="form-label">Phone <span class="required">*</span></label>
-              <BaseInput v-model="form.phone" placeholder="Contact number" required />
+
+            <!-- Contact Numbers -->
+            <div class="col-span-full mb-4">
+              <label class="form-label">Contact Numbers <span class="required">*</span></label>
+              <div class="contact-numbers-section">
+                <div v-for="(number, index) in form.contact_numbers" :key="index" class="contact-number-item">
+                  <div class="grid grid-cols-3 gap-2">
+                    <BaseSelect
+                      v-model="number.type"
+                      :options="numberTypeOptions"
+                      labelField="label"
+                      :reduce="(o) => o.value"
+                      placeholder="Type"
+                      :searchable="false"
+                      class="number-type-select"
+                    />
+                    <BaseInput
+                      v-model="number.number"
+                      placeholder="Phone number"
+                      class="number-input"
+                    />
+                    <div class="flex items-end">
+                      <BaseButton
+                        v-if="form.contact_numbers.length > 1"
+                        variant="danger"
+                        size="sm"
+                        icon="fa-solid fa-trash"
+                        @click="removeContactNumber(index)"
+                        class="remove-number-btn"
+                      />
+                      <BaseButton
+                        v-if="index === form.contact_numbers.length - 1"
+                        variant="primary"
+                        size="sm"
+                        icon="fa-solid fa-plus"
+                        @click="addContactNumber"
+                        class="add-number-btn"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="form-hint">
+                Add multiple contact numbers with different types (Person, Business, Service)
+              </div>
             </div>
 
             <!-- Email and Designation -->
@@ -186,15 +234,10 @@
               <BaseInput v-model="form.designation" placeholder="e.g. Manager, Doctor" />
             </div>
 
-            <!-- Department and Sort Order -->
+            <!-- Department -->
             <div class="mb-4">
               <label class="form-label">Department</label>
               <BaseInput v-model="form.department" placeholder="e.g. Sales, Medicine" />
-            </div>
-
-            <div class="mb-4">
-              <label class="form-label">Sort Order</label>
-              <BaseInput type="number" v-model="form.sort_order" />
             </div>
 
             <!-- Tags -->
@@ -246,6 +289,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
 import DataTable from '@/Components/DataTable.vue';
 import Badge from '@/Components/Badge.vue';
@@ -258,6 +302,8 @@ import { debounce } from 'lodash';
 import { useNotificationStore } from '@/store/notification';
 
 const { addNotification } = useNotificationStore();
+
+const router = useRouter();
 
 const loading = ref(true);
 const saving = ref(false);
@@ -275,20 +321,19 @@ const filters = reactive({
   keyword: '',
   tag_id: null,
   type: null,
-  sort_by: 'sort_order',
-  sort_order: 'asc'
+  sort_by: 'created_at',
+  sort_order: 'desc'
 });
 
 const form = reactive({
   name: '',
-  phone: '',
+  contact_numbers: [{ type: 'person', number: '' }],
   email: '',
   designation: '',
   department: '',
   address: '',
   description: '',
   type: 'person',
-  sort_order: 0,
   is_active: true,
   image_url: null,
   tag_ids: []
@@ -299,14 +344,19 @@ const columns = [
   { key: 'name', label: 'Name' },
   { key: 'tags', label: 'Tags' },
   { key: 'type', label: 'Type' },
-  { key: 'phone', label: 'Phone' },
+  { key: 'contact_numbers', label: 'Contact Numbers' },
   { key: 'designation', label: 'Designation' },
-  { key: 'sort_order', label: 'Order', class: 'text-center' },
   { key: 'is_active', label: 'Status' },
   { key: 'actions', label: 'Actions', class: 'text-right' },
 ];
 
 const typeOptions = [
+  { label: 'Person', value: 'person' },
+  { label: 'Business', value: 'business' },
+  { label: 'Service', value: 'service' }
+];
+
+const numberTypeOptions = [
   { label: 'Person', value: 'person' },
   { label: 'Business', value: 'business' },
   { label: 'Service', value: 'service' }
@@ -377,22 +427,19 @@ const openModal = (item = null) => {
     selectedId.value = item.id;
     Object.assign(form, {
       name: item.name,
-      phone: item.phone,
+      contact_numbers: item.contact_numbers && item.contact_numbers.length > 0
+        ? item.contact_numbers.map(cn => ({ type: cn.type, number: cn.number }))
+        : [{ type: 'person', number: item.phone || '' }],
       email: item.email,
       designation: item.designation,
       department: item.department,
       address: item.address,
       description: item.description,
       type: item.type,
-      sort_order: item.sort_order,
       is_active: !!item.is_active,
       image_url: item.image,
       tag_ids: item.tags ? item.tags.map(tag => tag.id) : []
     });
-    
-    // Debug: Log the tags being loaded
-    console.log('Loading contact for edit:', item.name);
-    console.log('Tags loaded:', form.tag_ids);
   } else {
     editMode.value = false;
     selectedId.value = null;
@@ -409,20 +456,33 @@ const closeModal = () => {
 const resetForm = () => {
   Object.assign(form, {
     name: '',
-    phone: '',
+    contact_numbers: [{ type: 'person', number: '' }],
     email: '',
     designation: '',
     department: '',
     address: '',
     description: '',
     type: 'person',
-    sort_order: 0,
     is_active: true,
     image_url: null,
     tag_ids: []
   });
   selectedFile.value = null;
   imagePreview.value = null;
+};
+
+const addContactNumber = () => {
+  form.contact_numbers.push({ type: 'person', number: '' });
+};
+
+const removeContactNumber = (index) => {
+  if (form.contact_numbers.length > 1) {
+    form.contact_numbers.splice(index, 1);
+  }
+};
+
+const previewContact = (item) => {
+  router.push(`/admin/community-directory/${item.id}/preview`);
 };
 
 const saveContact = async () => {
@@ -443,7 +503,12 @@ const saveContact = async () => {
                         formData.append(`tag_ids[${index}]`, tagId);
                     });
                 }
-                // If no tags selected, don't append anything (nullable field)
+            } else if (key === 'contact_numbers') {
+                 // Handle contact_numbers array for Laravel FormData
+                 form[key].forEach((cn, index) => {
+                     formData.append(`contact_numbers[${index}][type]`, cn.type);
+                     formData.append(`contact_numbers[${index}][number]`, cn.number);
+                 });
             } else {
                 formData.append(key, form[key] === null ? '' : (typeof form[key] === 'boolean' ? (form[key] ? 1 : 0) : form[key]));
             }
@@ -701,4 +766,34 @@ watch(() => form.tag_ids, (newValue, oldValue) => {
 .bg-blue-100 { background-color: #dbeafe; }
 .text-blue-800 { color: #1e40af; }
 .text-gray-400 { color: #9ca3af; }
+.btn-quick-filter {
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: #f3f6f9;
+  border: 1px solid #e1e3ea;
+  color: #7e8299;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-quick-filter:hover {
+  background: #3699ff;
+  color: white;
+  border-color: #3699ff;
+}
+.btn-quick-filter.active {
+  background: #3699ff;
+  color: white;
+  border-color: #3699ff;
+}
+.btn-quick-filter.clear {
+  background: #fff5f8;
+  color: #f64e60;
+  border-color: #f64e60;
+}
+.btn-quick-filter.clear:hover {
+  background: #f64e60;
+  color: white;
+}
 </style>

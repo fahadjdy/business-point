@@ -43,8 +43,13 @@
         </Badge>
       </template>
 
+      <template #cell(created_at)="{ item }">
+        {{ formatDate(item.created_at) }}
+      </template>
+
       <template #cell(actions)="{ item }">
         <div class="text-right">
+          <BaseButton variant="light" size="sm" icon="fa-solid fa-eye" class="mr-2" @click="previewAnnouncement(item)" />
           <BaseButton variant="light" size="sm" icon="fa-solid fa-pen-to-square" class="mr-2" @click="openModal(item)" />
           <BaseButton variant="light" size="sm" icon="fa-solid fa-trash" @click="deleteNotification(item.id)" class="text-danger" />
         </div>
@@ -162,6 +167,7 @@ import BaseCheckbox from '@/Components/BaseCheckbox.vue';
 import BaseModal from '@/Components/BaseModal.vue';
 import { debounce } from 'lodash';
 import { useNotificationStore } from '@/store/notification';
+import { formatDate } from '@/utils/formatters.js';
 
 const { addNotification } = useNotificationStore();
 
@@ -369,6 +375,11 @@ const saveNotification = async () => {
   } finally {
     saving.value = false;
   }
+};
+
+const previewAnnouncement = (item) => {
+  // Open preview in new tab or modal
+  window.open(`/announcements/${item.id}`, '_blank');
 };
 
 const deleteNotification = async (id) => {

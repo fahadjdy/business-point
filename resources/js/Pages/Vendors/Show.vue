@@ -68,6 +68,7 @@ import axios from 'axios';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import Badge from '@/Components/Badge.vue';
 import BaseButton from '@/Components/BaseButton.vue';
+import { formatDate } from '@/utils/formatters.js';
 
 const route = useRoute();
 const vendor = ref(null);
@@ -93,8 +94,6 @@ const toggleVerification = async () => {
     busy.value = false;
   }
 };
-
-const formatDate = (date) => new Date(date).toLocaleDateString();
 
 onMounted(fetchData);
 </script>

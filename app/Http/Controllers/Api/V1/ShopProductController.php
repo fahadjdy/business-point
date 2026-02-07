@@ -49,4 +49,27 @@ class ShopProductController extends BaseController
             201
         );
     }
+
+    public function update(Request $request, int $id)
+    {
+        $validated = $request->validate([
+            'category_id' => 'sometimes|exists:shop_product_categories,id',
+            'name' => 'sometimes|string|max:150',
+            'description' => 'nullable|string',
+            'price' => 'sometimes|numeric|min:0',
+            'compare_price' => 'nullable|numeric|min:0',
+            'is_active' => 'boolean',
+        ]);
+
+        return $this->success(
+            $this->service->update($id, $validated),
+            'Product updated successfully'
+        );
+    }
+
+    public function destroy(int $id)
+    {
+        $this->service->delete($id);
+        return $this->success(null, 'Product deleted successfully');
+    }
 }

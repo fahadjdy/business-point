@@ -37,6 +37,10 @@
           <i class="fa-solid fa-phone-flip"></i>
           <span v-if="!isCollapsed || isMobileOpen">Emergency Contacts</span>
         </router-link>
+        <router-link to="/admin/banners" class="nav-item" active-class="active">
+          <i class="fa-solid fa-image"></i>
+          <span v-if="!isCollapsed || isMobileOpen">Banners</span>
+        </router-link>
         <router-link to="/admin/community-directory" class="nav-item" active-class="active">
           <i class="fa-solid fa-address-book"></i>
           <span v-if="!isCollapsed || isMobileOpen">Community Directory</span>
