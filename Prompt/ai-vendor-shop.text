@@ -1,0 +1,537 @@
+1️⃣ Core Architecture & Routing Rule (Mandatory)
+Route Separation
+Super Admin
+
+All Super Admin routes must be stored in:
+
+routes/web.php
+
+
+Super Admin is web-only
+
+Responsibilities:
+
+Platform configuration
+
+Approvals
+
+Global toggles
+
+Vendor & user moderation
+
+User & Vendor (Shop / Doctor / Barber)
+
+All User and Vendor routes must be API-based:
+
+routes/api.php
+
+
+Reason:
+
+Same APIs are consumed by:
+
+Web frontend
+
+Android application
+
+No vendor or user logic should exist in web.php
+
+2️⃣ Common Vendor Module Rules
+
+Follow the same structure and naming for:
+
+vendor/shop/admin/*
+vendor/doctor/admin/*
+vendor/barber/admin/*
+
+
+Consistent:
+
+Route structure
+
+Controllers
+
+Permissions
+
+API responses
+
+APIs must be:
+
+Stateless
+
+Authenticated
+
+Ownership-validated
+
+Reusable across platforms
+
+3️⃣ API Base Structure
+/api/vendor/shop/admin/*
+/api/vendor/doctor/admin/*
+/api/vendor/barber/admin/*
+
+
+All APIs must:
+
+Live under routes/api.php
+
+Use API authentication
+
+Return standardized JSON
+
+4️⃣ Super Admin Panel (Web Only)
+Responsibilities
+
+Vendor approval & moderation
+
+Rename approvals (Shop / Doctor / Barber)
+
+Price visibility configuration
+
+Global feature toggles
+
+User-specific overrides
+
+5️⃣ Vendor Admin Entry Point (User Side)
+Access
+
+Location:
+
+User Settings → Manage (Shop / Doctor / Barber)
+
+
+Visible only to authenticated users
+
+Listing Page (Card View)
+
+List all vendor entities linked to the user
+
+Card must show:
+
+Name
+
+Status (Active / Inactive)
+
+Notification (admin messages)
+
+Manage button
+
+Support:
+
+Search
+
+Multiple entries per user
+
+6️⃣ Vendor Dashboard (Shop / Doctor / Barber)
+Dashboard Landing
+
+Widgets showing:
+
+Status
+
+Activity overview
+
+Pending approvals
+
+Notifications
+
+Sidebar Menu (Dynamic per Vendor Type)
+Shop	Doctor	Barber
+Manage Category	Profile & Specialization	Services
+Manage Product	Schedule & Timing	Schedule & Timing
+Settings	Photos & Gallery	Photos & Gallery
+—	Appointment Settings	Appointment Settings
+
+Breadcrumbs required on all pages
+
+7️⃣ Vendor Settings (Common)
+Editable Fields
+
+Address
+
+Contact information
+
+Timing / Working hours
+
+Profile photos
+
+Vendor name (Approval required)
+
+Rename Approval Flow
+
+On name change:
+
+Status → Pending Approval
+
+Approval handled by Super Admin
+
+Until approval:
+
+Show notice:
+
+“Name change is pending for admin review”
+
+Name field becomes read-only until decision
+
+8️⃣ Doctor Management Module
+Doctor Profile
+
+Doctor Name
+
+Specialization(s)
+
+Qualifications
+
+Years of experience
+
+Consultation fee (conditional visibility)
+
+Description (Rich Text Editor)
+
+Doctor Schedule & Timing
+
+Working days
+
+Time slots (morning / afternoon / evening)
+
+Break times
+
+Emergency availability toggle
+
+Doctor Photos & Media
+
+Profile photo
+
+Clinic photos
+
+Certificates (optional)
+
+LightGallery preview
+
+Appointment Settings
+
+Enable / Disable booking
+
+Max appointments per slot
+
+Online / Offline consultation
+
+9️⃣ Barber Management Module
+Barber Profile
+
+Barber Name
+
+Expertise (haircut, beard, styling, etc.)
+
+Experience
+
+Description
+
+Barber Schedule & Timing
+
+Weekly availability
+
+Slot-based timing
+
+Holiday / off-day management
+
+Services Management
+
+Service name
+
+Duration
+
+Price (conditional visibility)
+
+Status (Active / Inactive)
+
+Barber Photos & Work Gallery
+
+Profile image
+
+Work samples (before/after)
+
+Salon images
+
+LightGallery preview
+
+🔟 Shop Management Module (Summary)
+
+Categories
+
+Products
+
+Offers & featured tags
+
+Image gallery
+
+Conditional price display
+
+Inventory (optional quantity)
+
+(Shop details remain same as previously defined)
+
+1️⃣1️⃣ Price Visibility Control (Super Admin – Web Only)
+Global Toggles
+
+Allow Display Price for Vendor Products / Services
+
+Allow User-Specific Price Display
+
+Rules
+
+Vendor can always enter price
+
+Price shown on frontend only if:
+
+Global toggle is ON
+
+OR user-specific permission is granted
+
+1️⃣2️⃣ Media & Preview Rules (All Vendors)
+
+Multiple image uploads supported
+
+LightGallery preview mandatory
+
+Preview layout:
+
+Main carousel
+
+Thumbnail grid
+
+If more than 5 images → show +X more
+
+✅ Final Architecture Summary
+Layer	Route File	Used By
+Super Admin	web.php	Web only
+Vendor / User	api.php	Web + Android
+Android App	API	Shared
+Web Frontend	API	Shared
+
+
+
+1️⃣ Core Architecture & Routing Rule (Mandatory)
+Route Separation
+Super Admin (Web Only)
+
+All Super Admin routes must be defined in:
+
+routes/web.php
+
+
+Super Admin features are not exposed via API
+
+Handles:
+
+Platform configuration
+
+Approvals
+
+Moderation
+
+Global controls
+
+User & Vendor (Shop / Doctor / Barber)
+
+All user and vendor features must use:
+
+routes/api.php
+
+
+Same APIs are consumed by:
+
+Web frontend
+
+Android application
+
+2️⃣ Common Vendor Module Rules
+
+Maintain identical structure for:
+
+vendor/shop/admin/*
+vendor/doctor/admin/*
+vendor/barber/admin/*
+
+
+Consistent:
+
+Routing
+
+Controllers
+
+Policies
+
+API responses
+
+APIs must be:
+
+Stateless
+
+Authenticated
+
+Ownership validated
+
+3️⃣ API Base Structure (User & Vendor)
+/api/vendor/shop/admin/*
+/api/vendor/doctor/admin/*
+/api/vendor/barber/admin/*
+
+
+All APIs must be reusable across platforms
+
+Standardized JSON response format
+
+4️⃣ Super Admin Panel (Web Only)
+4.1 Vendor Master Listing (Shop / Doctor / Barber)
+
+Create separate listing pages for:
+
+Shops
+
+Doctors
+
+Barbers
+
+Each listing must support:
+
+Search
+
+Filters:
+
+Status (Pending / Approved / Rejected / Suspended)
+
+User
+
+Date
+
+Pagination
+
+Bulk actions (Approve / Reject)
+
+4.2 Listing Card / Table Details
+
+Each row or card must display:
+
+Vendor Name
+
+Vendor Type (Shop / Doctor / Barber)
+
+Owner (User)
+
+Status
+
+Created Date
+
+Pending actions indicator
+
+View / Approve / Reject buttons
+
+5️⃣ Approval Workflow (Super Admin Controlled)
+Approval Scenarios
+
+Approval is required for:
+
+New vendor creation
+
+Vendor name change
+
+Profile updates (optional rule-based)
+
+Price visibility enablement (optional)
+
+Approval Actions
+
+Super Admin can:
+
+Approve
+
+Reject (with reason)
+
+Suspend (temporary disable)
+
+Approval Status Flow
+Draft → Pending Approval → Approved / Rejected → Suspended
+
+6️⃣ Notification System (Very Important)
+6.1 Vendor Notifications
+
+When Super Admin performs any action:
+
+Approve
+
+Reject
+
+Suspend
+
+Request changes
+
+Notify vendor owner via:
+
+In-app notification
+
+Dashboard alert
+
+(Optional) Email / Push
+
+Example messages:
+
+“Your shop has been approved”
+
+“Doctor profile update rejected: Reason…”
+
+“Barber profile is suspended temporarily”
+
+6.2 Super Admin Notifications
+
+Notify Super Admin when:
+
+New Shop / Doctor / Barber is created
+
+Vendor submits name change
+
+Vendor updates profile requiring approval
+
+Notification must include:
+
+Vendor name
+
+Vendor type
+
+Action required link
+
+7️⃣ Vendor Listing Visibility Rules
+
+Vendor appears on frontend only if:
+
+Status = Approved
+
+Not suspended
+
+Pending or rejected vendors:
+
+Visible only to vendor owner
+
+Not visible to public users
+
+8️⃣ Vendor Dashboard Status Indicators
+
+On vendor dashboard show:
+
+Current status badge
+
+Pending approval warnings
+
+Rejection reason (if any)
+
+Suspension notice (if applicable)
+
+
+9️⃣ Audit & History (Recommended)
+
+🔟 Final Architecture Summary
+Layer	Route File	Responsibility
+Super Admin	web.php	Listings, approvals, moderation
+Vendor / User	api.php	Business logic & data
+Web Frontend	API	Shared
+Android App	API	Shared

@@ -1,0 +1,42 @@
+- create API contain name `vendor/shop/admin/*` 
+- always follow this structure for `vendor/doctor/admin` and barber
+- all api must create under API folder beacuse we are using same API for android application.
+
+Shop Admin Panel : 
+    - only accessible to auth user 
+    - at user setting menu `Manage Shop` page
+    - list all shop related to that user if multiple than also list there in card view with proper moder structure with search.
+    - mention all detail about shop at card (shop name , total product , total category , active/inactive , notification (if admin send message for perticuler shop)).
+    - also give `manage shop` button top manage it
+
+Manage Shop :   
+    - land on dashboard containing all relatyed shops widget.
+    - sidebar menu for `Manage category` , `Manage Product` , `Setting` .etc
+    - give breadcrumt to all pages to easy navigate 
+    - `setting` allow to edit shop timing and address , if edit name than let admin to approve first.once approve than it will be reflect till that it will show message that shop rename is pending to review at shop dashboard and setting page as well and once edit shop name than it will readonly until admin aprove.
+
+Manage Category : 
+    - allow shop admin to add/edit/delete category
+    - category name, descripption (editor) , status , image 
+    - if any admin delete any category which is also used in product than show him alert message with all product display name ,qty and preview before delete. if shop admin delete  that category and check the consent than let delete category as well as all relawent product.
+    - let admin to set public/draft category accordingly it will be display in front
+    - preview page for category 
+
+Manage Product : 
+    - `Manage Product` let shop admin to add/edit/delete product with beautifull ui and also let admin to add feature like `feature product`, `offer` like all tags 
+    - let qty as optional 
+    - allow multiple image to upload in with preview 
+    - Product Name, select category , Description (editor) , scheduler for upload , price
+    - Product price : ( conditional )
+        - if super admin set perticuler admin to display price than only product price display in store for user 
+        - shop admin can upload price even if admin disallow but it will not display in store product listing.
+        - admin can set global disallow price as well as perticuler shop too.
+        - create toggle for that at admin config section `Allow Display Price for Shop product` with description 
+        - also create toggle another for `Allow user specific allow product price` it will list all shop user and only selected user's shop product display price 
+        - there will be conditional user specific or all 
+
+    - allow shop admin to upload/edit/deleet  shop image 
+    - all image must display properly wiht lightgallery preview.
+    - in shop admin preview product to dsiplay image there will carousel and main image with grid formate at below and if more than 5 than it will be just display count of remaning `3 more`.
+
+
